@@ -1,0 +1,2 @@
+# ggm
+Golang generated models
