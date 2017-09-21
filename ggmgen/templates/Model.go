@@ -3,6 +3,72 @@ package templates
 const ModelTemplate = `
 
 // model {{.Name}} ORM part
+func ({{abbr .Name}} {{.Name}}) tableName() string {
+	return "{{.TableName}}"
+}
+
+func ({{abbr .Name}} *{{.Name}}) Save() error {
+	if inserting_err := {{abbr .Name}}.Insert(); inserting_err != nil {
+		// if alreadyExist error
+		var setStatement, whereClause []string
+		{{range $fi, $field := .Fields}}{{if $field.IsPrimaryKey}}whereClause = append(whereClause, fmt.Sprintf(` + "`" + `"{{$field.TableName}}"='{{$field.Type.FmtReplacer}}'` + "`" + `, {{abbr $.Name}}.{{$field.Name}}))
+		{{else}}setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.Name}}))
+		{{end}}{{end}}
+		_, err := ormDB.Exec("UPDATE \"{{.TableName}}\" SET "+strings.Join(setStatement, ", ")+" WHERE "+strings.Join(whereClause, " AND "))
+		if err != nil {
+			return err
+		} else {
+			return nil
+		}
+	}
+	return nil
+}
+
+func ({{abbr .Name}} *{{.Name}}) Insert() error {
+	{{range $field := .Fields}}{{if $field.IsPrimaryKey}}if {{abbr $.Name}}.{{$field.Name}} != {{$field.Type.DefaultValue}} {
+		return errors.New("Cannot insert {{$.Name}} with {{$field.Name}} != {{$field.Type.DefaultValue}}")
+	}
+	{{end}}{{end}}
+
+	var fieldTableNames, fieldValues []string
+	{{range $field := .Fields}}fieldTableNames = append(fieldTableNames, "\"{{$field.TableName}}\"")
+	fieldValues = append(fieldValues, fmt.Sprintf("'{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.Name}}))
+	{{end}}
+	result, err := ormDB.Exec("INSERT INTO \"{{.TableName}}\" ("+strings.Join(fieldTableNames, ", ")+") VALUES ("+strings.Join(fieldValues, ", ")+")")
+	if err != nil {
+		return err
+	}
+	if lastID, lastID_err := result.LastInsertId(); lastID_err != nil {
+		var selectPKFields []string
+		{{range $field := .Fields}}{{if $field.IsPrimaryKey}}selectPKFields = append(selectPKFields, "\"{{$field.TableName}}\""){{end}}{{end}}
+		row := ormDB.QueryRow("SELECT "+strings.Join(selectPKFields, ", ")+" FROM \"{{.TableName}}\" ORDER BY "+strings.Join(selectPKFields, ", ")+" DESC LIMIT 1;")
+		if scanning_err := row.Scan(&{{abbr .Name}}.ID); scanning_err != nil {
+			return scanning_err
+		}
+	} else {
+		{{abbr .Name}}.ID = lastID
+	}
+	//fmt.Println(result.LastInsertId())
+	//fmt.Println(err)
+	return nil
+}
+
+func ({{abbr .Name}} *{{.Name}}) Delete() error {
+	var pkFieldWhere []string
+	{{range $field := .Fields}}{{if $field.IsPrimaryKey}}pkFieldWhere = append(pkFieldWhere, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.Name}}))
+	{{end}}{{end}}
+	if _, err := ormDB.Exec("DELETE FROM \"{{.TableName}}\" WHERE "+strings.Join(pkFieldWhere, " AND ")); err != nil {
+		return err
+	}
+	{{range $field := .Fields}}{{if $field.IsPrimaryKey}}{{abbr $.Name}}.{{$field.Name}} = {{$field.Type.DefaultValue}}
+	{{end}}{{end}}
+	return nil
+}
+
+
+
+
+
 func {{.Name}}Q() *{{lower .Name}}Query {
 	return &{{lower .Name}}Query{}
 }

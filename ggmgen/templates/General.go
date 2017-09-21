@@ -34,40 +34,6 @@ type modelWhere interface{
     addCond(string)
 }
 
-type Model interface {
-	TableName() string
-}
-
-type modelIndex struct {
-	_modelData struct {
-		isUnique bool
-		model Model
-		fieldNames []string
-	}
-}
-
-func(mi *modelIndex) Index(isUnique bool, m Model, fieldNames ...string) {
-	mi._modelData.isUnique = isUnique
-	mi._modelData.model = m
-	mi._modelData.fieldNames = fieldNames
-}
-
-type modelFK struct {
-	_modelData struct {
-		modelFrom Model
-		fieldFromName string
-		modelTo Model
-		fieldToName string
-	}
-}
-
-func(mfk *modelFK) ForeignKey(modelFrom Model, fieldFromName string, modelTo Model, fieldToName string) {
-	mfk._modelData.modelFrom = modelFrom
-	mfk._modelData.fieldFromName = fieldFromName
-	mfk._modelData.modelTo = modelTo
-	mfk._modelData.fieldToName = fieldToName
-}
-
 func RunMigration() error {
 	if creating_table_err := createTableIfNotExist(); creating_table_err != nil {
 		return errors.New("RunMigration() createTableIfNotExist error: \n\t"+creating_table_err.Error())
@@ -77,6 +43,9 @@ func RunMigration() error {
 	}
 	if creating_fk_err := createForeignKeyIfNotExist(); creating_fk_err != nil {
 		return errors.New("RunMigration() createForeignKeyIfNotExist error: \n\t"+creating_fk_err.Error())
+	}
+	if creating_indexes_err := createIndexes(); creating_indexes_err != nil {
+		return errors.New("RunMigration() createIndexes error: \n\t"+creating_indexes_err.Error())
 	}
 	return nil
 }
@@ -135,6 +104,30 @@ func createForeignKeyIfNotExist() error {
 	}
 	{{range $model := .Models}}{{range $fk := $model.ForeignKeys}}if err := alterTableCreateFKFunc(` + "`" + `{{$fk.SqlAlterTable}}` + "`" + `); err != nil {
 		return errors.New("createForeignKeyIfNotExist \"{{$fk.ConstraintName}}\" error: \n\t\t"+err.Error())
+	}
+	{{end}}{{end}}
+	return nil
+}
+
+func createIndexes() error {
+	var alterTableCreateIndexFunc = func(indexName, sqlCommand string) error {
+		ormDB.Exec("DROP INDEX \""+indexName+"\";")
+		_, exec_err := ormDB.Exec(sqlCommand)
+		if exec_err != nil {
+			if pqErr, ok := exec_err.(*pq.Error); ok {
+				if pqErr.Code.Name() == "unique_violation" {
+					return errors.New("Cannot create index: there is a row already in DB that breaks this constraint. \n\tRaw SQL error: \"" + pqErr.Error() + "\"")
+				}
+				if pqErr.Code.Name() == "duplicate_table" {
+					return nil
+				}
+				return pqErr
+			}
+		}
+		return nil
+	}
+	{{range $model := .Models}}{{range $index := $model.Indexes}}if err := alterTableCreateIndexFunc("{{$index.Name}}", ` + "`" + `{{$index.CreateIndexSQL}}` + "`" + `); err != nil {
+		return errors.New("createIndexes \"{{$index.Name}}\" error: \n\t\t"+err.Error())
 	}
 	{{end}}{{end}}
 	return nil

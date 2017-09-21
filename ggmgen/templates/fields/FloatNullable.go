@@ -1,7 +1,7 @@
 package fields
 
 const FloatNullableTemplate = `
-type whereFieldFloatNullable struct {
+type whereFieldFloatNullable{{.ModelName}} struct {
 	name  string
 	where modelWhere
 }
