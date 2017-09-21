@@ -11,7 +11,23 @@ import (
 	"github.com/lib/pq"
 )
 
-var DB *sql.DB
+var ormDB *sql.DB
+
+const DEFAULT_DB_PORT = 5432
+
+func ConnectToDBAndInit(userName, dbName, password, host string, port int) error {
+	if sqlConn, connecting_err := sql.Open("postgres", "user="+userName+" dbname="+dbName+" host="+host+" port="+fmt.Sprintf("%d", port)+" password="+password+" sslmode=disable"); connecting_err != nil {
+		return errors.New("connectToDb error: "+connecting_err.Error())
+	} else {
+		ormDB = sqlConn
+	}
+
+	return RunMigration()
+}
+func SetDBAndInit(db *sql.DB) error {
+	ormDB = db
+	return RunMigration()
+}
 
 type modelWhere interface{
     andOr()
@@ -54,35 +70,33 @@ func(mfk *modelFK) ForeignKey(modelFrom Model, fieldFromName string, modelTo Mod
 
 func RunMigration() error {
 	if creating_table_err := createTableIfNotExist(); creating_table_err != nil {
-		return errors.New("RunMigration() error: "+creating_table_err.Error())
+		return errors.New("RunMigration() createTableIfNotExist error: \n\t"+creating_table_err.Error())
 	}
 	if creating_columns_err := createTableColumnsIfNotExist(); creating_columns_err != nil {
-		return errors.New("RunMigration() error: "+creating_columns_err.Error())
+		return errors.New("RunMigration() createTableColumnsIfNotExist error: \n\t"+creating_columns_err.Error())
+	}
+	if creating_fk_err := createForeignKeyIfNotExist(); creating_fk_err != nil {
+		return errors.New("RunMigration() createForeignKeyIfNotExist error: \n\t"+creating_fk_err.Error())
 	}
 	return nil
 }
 
 func createTableIfNotExist() error {
-	var createTableSQL string
 	{{range $model := .Models}}
-	createTableSQL += ` + "`" + `CREATE TABLE IF NOT EXISTS "{{$model.TableName}}" (
-	{{range $fi, $field := $model.Fields}}	"{{$field.TableName}}" {{$field.SqlType}}{{if not (IsLastElement $fi (len $model.Fields))}},{{end}}
-	{{end}});
-` + "`" + `{{end}}
-
-	if _, err := DB.Exec(createTableSQL); err != nil {
-		return err
+	if _, err := ormDB.Exec(` + "`" + `{{$model.CreateTableIfNotExistCommand}}` + "`" + `);  err != nil {
+		return errors.New("CreateTableIfNotExist error for table \"{{$model.Name}}\": "+err.Error())
 	}
+	{{end}}
 	return nil
 }
 
 func createTableColumnsIfNotExist() error {
 	var alterTableAddColumnFunc = func(tableName, columnName, columnType string) error {
-		_, err := DB.Query("SELECT \"" + columnName + "\" FROM \"" + tableName + "\" LIMIT 1;")
+		_, err := ormDB.Query("SELECT \"" + columnName + "\" FROM \"" + tableName + "\" LIMIT 1;")
 		if err != nil {
 			if pqErr, canCast := err.(*pq.Error); canCast {
 				if pqErr.Code.Name() == "undefined_column" {
-					_, exec_err := DB.Exec("ALTER TABLE \"" + tableName + "\" ADD COLUMN \"" + columnName + " " + columnName + ";")
+					_, exec_err := ormDB.Exec("ALTER TABLE \"" + tableName + "\" ADD COLUMN \"" + columnName + "\" " + columnType + ";")
 					if exec_err != nil {
 						return errors.New("creatingColumnIfNotExist " + tableName + ".\"" + columnName + "\" error when adding new column: " + exec_err.Error())
 					}
@@ -96,8 +110,31 @@ func createTableColumnsIfNotExist() error {
 		return nil
 	}
 
-	{{range $model := .Models}}{{range $field := $model.Fields}}if creating_err := alterTableAddColumnFunc("{{$model.TableName}}", "{{$field.TableName}}", "{{$field.SqlType}}"); creating_err != nil {
+	{{range $model := .Models}}{{range $field := $model.AllFields}}if creating_err := alterTableAddColumnFunc("{{$model.TableName}}", "{{$field.TableName}}", "{{$field.SqlType}}"); creating_err != nil {
 			return creating_err
+	}
+	{{end}}{{end}}
+	return nil
+}
+
+func createForeignKeyIfNotExist() error {
+	var alterTableCreateFKFunc = func(sqlCommand string) error {
+		_, exec_err := ormDB.Exec(sqlCommand)
+		if exec_err != nil {
+			if pqErr, ok := exec_err.(*pq.Error); ok {
+				if pqErr.Code.Name() == "foreign_key_violation" {
+					return errors.New("Cannot create foreign key constraint: there is a row already in DB that breaks this constraint. \n\tRaw SQL error: \"" + pqErr.Error() + "\"")
+				}
+				if pqErr.Code.Name() == "duplicate_object" {
+					return nil
+				}
+				return pqErr
+			}
+		}
+		return nil
+	}
+	{{range $model := .Models}}{{range $fk := $model.ForeignKeys}}if err := alterTableCreateFKFunc(` + "`" + `{{$fk.SqlAlterTable}}` + "`" + `); err != nil {
+		return errors.New("createForeignKeyIfNotExist \"{{$fk.ConstraintName}}\" error: \n\t\t"+err.Error())
 	}
 	{{end}}{{end}}
 	return nil

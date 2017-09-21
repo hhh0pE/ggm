@@ -31,7 +31,7 @@ type {{lower .Name}}Query struct {
 
 
 func ({{abbr .Name}} {{lower .Name}}Query) ALL() []{{.Name}} {
-	rows, err := DB.Query({{abbr .Name}}.SQL())
+	rows, err := ormDB.Query({{abbr .Name}}.SQL())
 	if err != nil {
 		panic(err)
 	}
