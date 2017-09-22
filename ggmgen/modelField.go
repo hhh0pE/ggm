@@ -105,6 +105,23 @@ func (mf modelField) TableName() string {
 //	}
 //	return false
 //}
+func (mf modelField) FieldValueName() string {
+	if mf.Type.ConstType == fieldType.DateType {
+		return mf.Name + ".Unix()"
+	}
+	if mf.IsForeignKey {
+		return mf.Name + "." + mf.Relation.modelTo.PrimaryKey().FieldValueName()
+	}
+	return mf.Name
+}
+
+func (mf modelField) DefaultValue() string {
+	//if mf.IsForeignKey && mf.Type.ConstType == 0 {
+	//	mf.Type = fieldType.Integer
+	//}
+	//fmt.Println(mf.Model.Name, mf.Name, "defaultValue", mf.Type)
+	return mf.Type.DefaultValue()
+}
 
 func (mf modelField) FindTag(names []string) (string, bool) {
 	for _, name := range names {

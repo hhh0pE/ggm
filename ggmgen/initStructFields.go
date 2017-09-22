@@ -77,21 +77,22 @@ func scanField(field *types.Var) []modelField {
 
 	underlying := field.Type().Underlying()
 	if typePointer, ok := underlying.(*types.Pointer); ok {
-		//newModelField.IsPointer = true
+		newModelField.IsPointer = true
 		newModelField.Type.IsNullable = true
 		underlying = typePointer.Elem().Underlying()
 	}
+
 	if typeBasic, ok := underlying.(*types.Basic); ok {
 		kind := typeBasic.Kind()
 		switch {
 		case types.Int <= kind && kind <= types.Uint64:
-			newModelField.Type = fieldType.Integer
+			newModelField.Type.ConstType = fieldType.IntType
 		case types.Float32 == kind || kind == types.Float64:
-			newModelField.Type = fieldType.Numeric
+			newModelField.Type.ConstType = fieldType.FloatType
 		case kind == types.String:
-			newModelField.Type = fieldType.Text
+			newModelField.Type.ConstType = fieldType.TextType
 		case kind == types.Bool:
-			newModelField.Type = fieldType.Boolean
+			newModelField.Type.ConstType = fieldType.BoolType
 		default:
 			return nil
 		}
@@ -126,6 +127,7 @@ func scanField(field *types.Var) []modelField {
 			if foundModel := pkgS.GetModel(field.Name()); foundModel != nil {
 
 				newModelField.Name = field.Name()
+				newModelField.Type = fieldType.Integer
 				newModelField.IsForeignKey = true
 				newModelField.Relation = new(tableForeignRelation)
 				newModelField.Relation.isOne2One = true
@@ -181,6 +183,7 @@ func scanField(field *types.Var) []modelField {
 
 				if foundModel := pkgS.GetModel(typeNamed.Obj().Name()); foundModel != nil {
 					newModelField.IsForeignKey = true
+					newModelField.Type.ConstType = fieldType.IntType
 					var tableFK tableForeignRelation
 					//tableFK.field = &newModelField
 					tableFK.modelTo = foundModel

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/hhh0pE/ggm/ggmgen/fieldType"
@@ -26,13 +25,29 @@ func (mi modelIndex) Name() string {
 	}
 }
 
-func (mi modelIndex) Check() error {
-	model := pkgS.GetModel(mi.modelName)
-	if model == nil {
-		return errors.New("Cannot find model with name \"" + mi.modelName + "\"")
-	}
-	return nil
+func (mi modelIndex) Model() *ModelStruct {
+	return pkgS.GetModel(mi.modelName)
 }
+
+func (mi modelIndex) Fields() []modelField {
+	model := mi.Model()
+	var fields []modelField
+	for _, fieldName := range mi.fieldNames {
+		if foundField := model.GetFieldByName(fieldName); foundField != nil {
+			fields = append(fields, *foundField)
+		}
+	}
+
+	return fields
+}
+
+//func (mi modelIndex) Check() error {
+//	model := pkgS.GetModel(mi.modelName)
+//	if model == nil {
+//		return errors.New("Cannot find model with name \"" + mi.modelName + "\"")
+//	}
+//	return nil
+//}
 
 func (mi modelIndex) CreateIndexSQL() string {
 	model := pkgS.GetModel(mi.modelName)

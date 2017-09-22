@@ -11,9 +11,29 @@ func ({{abbr .Name}} *{{.Name}}) Save() error {
 	if inserting_err := {{abbr .Name}}.Insert(); inserting_err != nil {
 		// if alreadyExist error
 		var setStatement, whereClause []string
-		{{range $fi, $field := .Fields}}{{if $field.IsPrimaryKey}}whereClause = append(whereClause, fmt.Sprintf(` + "`" + `"{{$field.TableName}}"='{{$field.Type.FmtReplacer}}'` + "`" + `, {{abbr $.Name}}.{{$field.Name}}))
-		{{else}}setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.Name}}))
-		{{end}}{{end}}
+
+{{if gt (len .Indexes) 0}}
+		if {{range $ii, $index := .Indexes -}}
+		{{range $ifi, $indexField := $index.Fields -}}
+			{{- if $indexField.Type.IsNullable}}{{abbr $.Name}}.{{$indexField.FieldValueName}} != nil && *{{end -}}
+			{{- abbr $.Name}}.{{$indexField.FieldValueName}} != {{$indexField.DefaultValue -}}
+			{{- if IsNotLastElement $ifi (len $index.Fields)}} && {{end -}}
+		{{end}} {
+		{{range $ifi, $indexField := $index.Fields -}}
+		{{if true}}	{{end}}whereClause = append(whereClause, fmt.Sprintf("\"{{$indexField.TableName}}\" = '{{$indexField.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$indexField.Name}}))
+		{{end -}}
+}{{if IsNotLastElement $ii (len $.Indexes)}} else if {{end -}}
+	{{- end -}}
+	{{- if true}}{{end}} else if {{if true}}{{end -}}
+		{{- range $fi, $field := .Fields -}}
+			{{- if $field.IsPrimaryKey -}} {{abbr $.Name}}.{{$field.FieldValueName}} != {{$field.DefaultValue}} {{end -}}
+		{{- end}} {
+{{- end}}
+		{{range $fi, $field := .Fields}}{{if $field.IsPrimaryKey}}	whereClause = append(whereClause, fmt.Sprintf(` + "`" + `"{{$field.TableName}}"='{{$field.Type.FmtReplacer}}'` + "`" + `, {{abbr $.Name}}.{{$field.Name}})){{end}}{{end}}
+		{{if gt (len .Indexes) 0 -}} } {{- end}}
+		{{range $fi, $field := .Fields}}{{if not $field.IsPrimaryKey}}
+		setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.Name}}))
+		{{- end}}{{end}}
 		_, err := ormDB.Exec("UPDATE \"{{.TableName}}\" SET "+strings.Join(setStatement, ", ")+" WHERE "+strings.Join(whereClause, " AND "))
 		if err != nil {
 			return err
