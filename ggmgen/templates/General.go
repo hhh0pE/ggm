@@ -9,11 +9,21 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/lib/pq"
+	"log"
 )
 
 var ormDB *sql.DB
 
 const DEFAULT_DB_PORT = 5432
+
+var debug bool
+
+func EnableDebug() {
+	debug = true
+}
+func DisableDebug() {
+	debug = false
+}
 
 func ConnectToDBAndInit(userName, dbName, password, host string, port int) error {
 	if sqlConn, connecting_err := sql.Open("postgres", "user="+userName+" dbname="+dbName+" host="+host+" port="+fmt.Sprintf("%d", port)+" password="+password+" sslmode=disable"); connecting_err != nil {
@@ -27,6 +37,28 @@ func ConnectToDBAndInit(userName, dbName, password, host string, port int) error
 func SetDBAndInit(db *sql.DB) error {
 	ormDB = db
 	return RunMigration()
+}
+
+func SetMaxConnections(num int) {
+	if ormDB == nil {
+		panic("Cannot setMaxConnections for not initialized models.DB. Call SetDBAndInit first.")
+	}
+	ormDB.SetMaxOpenConns(num)
+}
+
+func Query(sql string, args ...interface{}) (*sql.Rows, error) {
+	return ormDB.Query(sql, args...)
+}
+
+func QueryRow(sql string, args ...interface{}) *sql.Row {
+	return ormDB.QueryRow(sql, args...)
+}
+
+func Exec(sql string, args ...interface{}) (sql.Result, error) {
+	if debug {
+		log.Println(sql)
+	}
+	return ormDB.Exec(sql, args...)
 }
 
 type modelWhere interface{

@@ -27,6 +27,16 @@ func (ms ModelStruct) PrimaryKey() *modelField {
 	return nil
 }
 
+func (ms ModelStruct) PrimaryKeys() []modelField {
+	var keys []modelField
+	for fi, f := range ms.Fields() {
+		if f.IsPrimaryKey {
+			keys = append(keys, ms.Fields()[fi])
+		}
+	}
+	return keys
+}
+
 //func (ms ModelStruct) TableFields() []modelField {
 //	fields := ms.fields
 //	for i:=0; i<len(fields); i++ {

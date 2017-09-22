@@ -9,37 +9,52 @@ func ({{abbr .Name}} {{.Name}}) tableName() string {
 
 func ({{abbr .Name}} *{{.Name}}) Save() error {
 	if inserting_err := {{abbr .Name}}.Insert(); inserting_err != nil {
-		// if alreadyExist error
+		if pqInsertingErr, ok := inserting_err.(*pq.Error); ok {
+			if pqInsertingErr.Code.Name() != "unique_violation" {
+				return pqInsertingErr
+			}
+		}
+
 		var setStatement, whereClause []string
 
-{{if gt (len .Indexes) 0}}
-		if {{range $ii, $index := .Indexes -}}
-		{{range $ifi, $indexField := $index.Fields -}}
-			{{- if $indexField.Type.IsNullable}}{{abbr $.Name}}.{{$indexField.FieldValueName}} != nil && *{{end -}}
-			{{- abbr $.Name}}.{{$indexField.FieldValueName}} != {{$indexField.DefaultValue -}}
-			{{- if IsNotLastElement $ifi (len $index.Fields)}} && {{end -}}
-		{{end}} {
-		{{range $ifi, $indexField := $index.Fields -}}
-		{{if true}}	{{end}}whereClause = append(whereClause, fmt.Sprintf("\"{{$indexField.TableName}}\" = '{{$indexField.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$indexField.Name}}))
-		{{end -}}
-}{{if IsNotLastElement $ii (len $.Indexes)}} else if {{end -}}
-	{{- end -}}
-	{{- if true}}{{end}} else if {{if true}}{{end -}}
-		{{- range $fi, $field := .Fields -}}
-			{{- if $field.IsPrimaryKey -}} {{abbr $.Name}}.{{$field.FieldValueName}} != {{$field.DefaultValue}} {{end -}}
-		{{- end}} {
-{{- end}}
-		{{range $fi, $field := .Fields}}{{if $field.IsPrimaryKey}}	whereClause = append(whereClause, fmt.Sprintf(` + "`" + `"{{$field.TableName}}"='{{$field.Type.FmtReplacer}}'` + "`" + `, {{abbr $.Name}}.{{$field.Name}})){{end}}{{end}}
-		{{if gt (len .Indexes) 0 -}} } {{- end}}
-		{{range $fi, $field := .Fields}}{{if not $field.IsPrimaryKey}}
-		setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.Name}}))
+		if {{range $pki, $pk := .PrimaryKeys}}{{abbr $.Name}}.{{$pk.Name}} != {{$pk.DefaultValue}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}} && {{end}}{{end}} {
+			{{range $pki, $pk := .PrimaryKeys}}whereClause = append(whereClause, fmt.Sprintf("\"{{$pk.TableName}}\" = '{{$pk.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$pk.FieldValueName}})){{end}}
+		} else {
+	{{if gt (len .Indexes) 0}}
+			if {{range $ii, $index := .Indexes -}}
+			{{range $ifi, $indexField := $index.Fields -}}
+				{{- if $indexField.Type.IsNullable}}{{abbr $.Name}}.{{$indexField.FieldValueName}} != nil && *{{end -}}
+				{{- abbr $.Name}}.{{$indexField.FieldValueName}} != {{$indexField.DefaultValue -}}
+				{{- if IsNotLastElement $ifi (len $index.Fields)}} && {{end -}}
+			{{end}} {
+			{{range $ifi, $indexField := $index.Fields -}}
+			{{if true}}	{{end}}whereClause = append(whereClause, fmt.Sprintf("\"{{$indexField.TableName}}\" = '{{$indexField.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$indexField.FieldValueName}}))
+			{{end -}}
+	}{{if IsNotLastElement $ii (len $.Indexes)}} else if {{end -}}
+		{{- end -}}
+	{{- end}}
+		}
+
+		{{range $fi, $field := .AllFields}}{{if not $field.IsPrimaryKey}}
+		setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.FieldValueName}}))
 		{{- end}}{{end}}
-		_, err := ormDB.Exec("UPDATE \"{{.TableName}}\" SET "+strings.Join(setStatement, ", ")+" WHERE "+strings.Join(whereClause, " AND "))
+
+		_, err := Exec("UPDATE \"{{.TableName}}\" SET "+strings.Join(setStatement, ", ")+" WHERE "+strings.Join(whereClause, " AND "))
 		if err != nil {
 			return err
-		} else {
-			return nil
 		}
+
+		if {{range $pki, $pk := .PrimaryKeys}}{{abbr $.Name}}.{{$pk.Name}} == {{$pk.DefaultValue}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}} || {{end}}{{end}} {
+			var selectPKFields []string
+			{{range $pk := .PrimaryKeys}}selectPKFields = append(selectPKFields, "\"{{$pk.TableName}}\""){{end}}
+			row := QueryRow("SELECT "+strings.Join(selectPKFields, ", ")+" FROM \"{{.TableName}}\" WHERE " + strings.Join(whereClause, " AND ") + ";")
+
+			if scanning_err := row.Scan({{range $pki, $pk := .PrimaryKeys}}&{{abbr $.Name}}.{{$pk.Name}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}}, {{end}}{{end}}); scanning_err != nil {
+				return scanning_err
+			}
+		}
+		return nil
+
 	}
 	return nil
 }
@@ -51,17 +66,21 @@ func ({{abbr .Name}} *{{.Name}}) Insert() error {
 	{{end}}{{end}}
 
 	var fieldTableNames, fieldValues []string
-	{{range $field := .Fields}}fieldTableNames = append(fieldTableNames, "\"{{$field.TableName}}\"")
-	fieldValues = append(fieldValues, fmt.Sprintf("'{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.Name}}))
-	{{end}}
-	result, err := ormDB.Exec("INSERT INTO \"{{.TableName}}\" ("+strings.Join(fieldTableNames, ", ")+") VALUES ("+strings.Join(fieldValues, ", ")+")")
+	{{range $field := .AllFields -}}
+		{{if not $field.IsPrimaryKey}}
+	fieldTableNames = append(fieldTableNames, "\"{{$field.TableName}}\"")
+	fieldValues = append(fieldValues, fmt.Sprintf("'{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.FieldValueName}}))
+		{{- end -}}
+	{{- end}}
+
+	result, err := Exec("INSERT INTO \"{{.TableName}}\" ("+strings.Join(fieldTableNames, ", ")+") VALUES ("+strings.Join(fieldValues, ", ")+")")
 	if err != nil {
 		return err
 	}
 	if lastID, lastID_err := result.LastInsertId(); lastID_err != nil {
 		var selectPKFields []string
 		{{range $field := .Fields}}{{if $field.IsPrimaryKey}}selectPKFields = append(selectPKFields, "\"{{$field.TableName}}\""){{end}}{{end}}
-		row := ormDB.QueryRow("SELECT "+strings.Join(selectPKFields, ", ")+" FROM \"{{.TableName}}\" ORDER BY "+strings.Join(selectPKFields, ", ")+" DESC LIMIT 1;")
+		row := QueryRow("SELECT "+strings.Join(selectPKFields, ", ")+" FROM \"{{.TableName}}\" ORDER BY "+strings.Join(selectPKFields, ", ")+" DESC LIMIT 1;")
 		if scanning_err := row.Scan(&{{abbr .Name}}.ID); scanning_err != nil {
 			return scanning_err
 		}
@@ -77,7 +96,7 @@ func ({{abbr .Name}} *{{.Name}}) Delete() error {
 	var pkFieldWhere []string
 	{{range $field := .Fields}}{{if $field.IsPrimaryKey}}pkFieldWhere = append(pkFieldWhere, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.Name}}))
 	{{end}}{{end}}
-	if _, err := ormDB.Exec("DELETE FROM \"{{.TableName}}\" WHERE "+strings.Join(pkFieldWhere, " AND ")); err != nil {
+	if _, err := Exec("DELETE FROM \"{{.TableName}}\" WHERE "+strings.Join(pkFieldWhere, " AND ")); err != nil {
 		return err
 	}
 	{{range $field := .Fields}}{{if $field.IsPrimaryKey}}{{abbr $.Name}}.{{$field.Name}} = {{$field.Type.DefaultValue}}
