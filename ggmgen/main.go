@@ -14,7 +14,7 @@ import (
 
 	"go/importer"
 
-	"log"
+	log "log"
 
 	"github.com/hhh0pE/ggm/ggmgen/templates"
 	"github.com/nullbio/inflect"
@@ -64,7 +64,12 @@ func analyze() *packageStruct {
 
 	pkgS = &pStruct
 	for _, pkg := range pkgs {
-		pStruct = initPackageStructs(pkg)
+		var initPkgErr error
+		pStruct, initPkgErr = initPackageStructs(pkg)
+		if initPkgErr != nil {
+			log.Println(initPkgErr.Error())
+			return nil
+		}
 		break
 	}
 
@@ -88,13 +93,15 @@ func analyze() *packageStruct {
 			i--
 		}
 	}
-
+	//
 	//for _, m := range pStruct.Models {
-	//	fmt.Println(m.Name, m.TableName)
-	//	for _, inf := range m.incomeFKFields {
-	//		fmt.Println("   ", inf.Model.Name, inf.Name)
+	//
+	//	if m.notify != nil {
+	//		fmt.Println(m.Name, m.TableName)
+	//		fmt.Println(m.notify)
+	//		fmt.Println()
 	//	}
-	//	fmt.Println()
+	//
 	//}
 
 	return &pStruct

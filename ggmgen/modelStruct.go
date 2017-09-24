@@ -7,6 +7,7 @@ type ModelStruct struct {
 	TableName string
 	fields    []modelField
 	indexes   []modelIndex
+	notify    *pgNotify
 }
 
 func (ms ModelStruct) HasPrimaryKey() bool {
@@ -157,24 +158,8 @@ func (ms *ModelStruct) GetFieldByName(fieldName string) *modelField {
 	return nil
 }
 
-func (ms ModelStruct) SQLSave() string {
-	//return fmt.Sprintf("UPDATE \"currencies\" SET \"name\"='%s' WHERE \"id\"='%d'", {{abbr .Name}}.Name, {{abbr .Name}}.ID)
-	return ""
-}
-
-func (ms ModelStruct) SQLInsert() string {
-	//fmt.Sprintf("INSERT INTO \"{{.TableName}}\" (\"name\") VALUES ('%s') RETURNING \"id\";", {{abbr .Name}}.Name)
-	return ""
-}
-
-func (ms ModelStruct) SQLGetLastIndex() string {
-	//"SELECT \"id\" FROM \"{{.TableName}}\" ORDER BY \"id\" DESC LIMIT 1;"
-	return ""
-}
-
-func (ms ModelStruct) SQLDelete() string {
-	// fmt.Sprintf("DELETE FROM \"{{.TableName}}\" WHERE \"id\" = '%d';", {{abbr .Name}}.ID)
-	return ""
+func (ms ModelStruct) Notify() *pgNotify {
+	return ms.notify
 }
 
 func (ms ModelStruct) UniqueTypeFields() []modelField {

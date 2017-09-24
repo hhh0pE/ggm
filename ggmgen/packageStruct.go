@@ -33,3 +33,22 @@ func (ps *packageStruct) AddModel(m ModelStruct) {
 	}
 	ps.Models = append(ps.Models, &m)
 }
+
+func (ps packageStruct) HasNotify() bool {
+	for _, m := range ps.Models {
+		if m.notify != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func (ps packageStruct) Notifies() []pgNotify {
+	var notifies []pgNotify
+	for _, m := range ps.Models {
+		if m.notify != nil {
+			notifies = append(notifies, *m.notify)
+		}
+	}
+	return notifies
+}

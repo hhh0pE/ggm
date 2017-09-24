@@ -10,6 +10,7 @@ import (
 	"errors"
 	"github.com/lib/pq"
 	"log"
+	"encoding/json"
 )
 
 var ormDB *sql.DB
@@ -32,11 +33,23 @@ func ConnectToDBAndInit(userName, dbName, password, host string, port int) error
 		ormDB = sqlConn
 	}
 
-	return RunMigration()
+	if runMigration_err := RunMigration(); runMigration_err != nil {
+		return errors.New("RunMigration error: "+runMigration_err.Error())
+	}
+	{{if .HasNotify}}
+	if initPgListener_err := initPgListener("user="+userName+" dbname="+dbName+" host="+host+" port="+fmt.Sprintf("%d", port)+" password="+password+" sslmode=disable"); initPgListener_err != nil {
+		return errors.New("initPgListener error: "+initPgListener_err.Error())
+	}
+	{{end}}
+	return nil
 }
-func SetDBAndInit(db *sql.DB) error {
+/*func SetDBAndInit(db *sql.DB) error {
 	ormDB = db
 	return RunMigration()
+}*/
+
+func DB() *sql.DB {
+	return ormDB
 }
 
 func SetMaxConnections(num int) {
@@ -66,6 +79,10 @@ type modelWhere interface{
     addCond(string)
 }
 
+type model interface {
+	tableName() string
+}
+
 func RunMigration() error {
 	if creating_table_err := createTableIfNotExist(); creating_table_err != nil {
 		return errors.New("RunMigration() createTableIfNotExist error: \n\t"+creating_table_err.Error())
@@ -79,6 +96,10 @@ func RunMigration() error {
 	if creating_indexes_err := createIndexes(); creating_indexes_err != nil {
 		return errors.New("RunMigration() createIndexes error: \n\t"+creating_indexes_err.Error())
 	}
+	{{if .HasNotify -}}
+	if creating_notifies_err := createNotifies(); creating_notifies_err != nil {
+		return errors.New("RunMigration() create notifications error: \n\t"+creating_notifies_err.Error())
+	}{{end}}
 	return nil
 }
 
@@ -164,4 +185,221 @@ func createIndexes() error {
 	{{end}}{{end}}
 	return nil
 }
+
+{{define "notifyFuncName"}}{{if .Name}}{{.Name}}{{else}}Notify_{{.ModelName}}{{end}}_ggm{{end}}
+{{define "notifyChannelName"}}{{.ModelName}}{{if .OnInsert}}_insert{{end}}{{if .OnUpdate}}_update{{end}}{{if .OnDelete}}_delete{{end}}{{end}}
+{{define "notifyChannelValueInsert" -}}
+	{{- range $fi, $field := .Fields -}}
+		to_json(NEW.{{$field.TableName}})::TEXT
+		{{- if IsNotLastElement $fi (len $.Fields)}} || ',' || {{end -}}
+	{{- end -}}
+{{end}}
+{{define "notifyChannelValueUpdate" -}}
+	{{- range $fi, $field := .Fields -}}
+		to_json(NEW.{{$field.TableName}})::TEXT
+		{{- if IsNotLastElement $fi (len $.Fields)}} || ',' || {{end -}}
+	{{- end -}}
+	{{- if true}} || ';' || {{end -}}
+	{{- range $fi, $field := .Fields -}}
+		to_json(OLD.{{$field.TableName}})::TEXT
+		{{- if IsNotLastElement $fi (len $.Fields)}} || ',' || {{end -}}
+	{{- end -}}
+{{end}}
+{{define "notifyChannelValueDelete" -}}
+	{{- range $fi, $field := .Fields -}}
+		to_json(OLD.{{$field.TableName}})::TEXT
+		{{- if IsNotLastElement $fi (len $.Fields)}} || ',' || {{end -}}
+	{{- end -}}
+{{end}}
+{{define "notifyTriggerEvents" -}}
+	{{- if .OnInsert -}}
+		INSERT
+	{{- end -}}
+	{{- if .OnUpdate -}}
+		{{- if .OnInsert}} OR {{end -}}
+		UPDATE
+	{{- end -}}
+	{{- if .OnDelete -}}
+		{{- if or .OnInsert .OnUpdate}} OR {{end -}}
+		DELETE
+	{{- end -}}
+{{- end}}
+
+func createNotifies() error {
+	{{range $model := .Models -}}
+		{{- if $model.Notify -}}
+			if _, creatingFunc_err := ormDB.Exec(` + "`" + `CREATE OR REPLACE FUNCTION {{template "notifyFuncName" $model.Notify}}() RETURNS trigger AS $$
+DECLARE
+BEGIN
+	{{- if $model.Notify.OnInsert}}
+	IF TG_OP = 'INSERT' THEN
+		PERFORM pg_notify('{{$model.Name}}_Insert', {{template "notifyChannelValueInsert" $model.Notify}});
+	END IF;
+	{{- end}}
+	{{- if $model.Notify.OnUpdate}}
+	IF TG_OP = 'UPDATE' THEN
+		PERFORM pg_notify('{{$model.Name}}_Update', {{template "notifyChannelValueUpdate" $model.Notify}});
+	END IF;
+	{{- end}}
+	{{- if $model.Notify.OnDelete}}
+	IF TG_OP = 'DELETE' THEN
+		PERFORM pg_notify('{{$model.Name}}_Delete', {{template "notifyChannelValueDelete" $model.Notify}});
+	END IF;
+	{{- end}}
+  RETURN NEW;
+END
+$$ LANGUAGE plpgsql;` + "`" + `); creatingFunc_err != nil {
+		return creatingFunc_err
+	}
+
+	if _, err := ormDB.Exec(` + "`" + `DROP TRIGGER IF EXISTS "{{template "notifyFuncName" $model.Notify}}" ON "{{$model.TableName}}";` + "`" + `); err != nil {
+		return err
+	}
+
+	if _, err := ormDB.Exec(` + "`" + `CREATE TRIGGER "{{template "notifyFuncName" $model.Notify}}"
+AFTER {{template "notifyTriggerEvents" $model.Notify}} ON "{{$model.TableName}}"
+FOR EACH ROW
+EXECUTE PROCEDURE {{template "notifyFuncName" $model.Notify}}();` + "`" + `); err != nil {
+		return err
+	}
+
+		{{end -}}
+	{{- end -}}
+
+
+	return nil
+}
+
+{{range $notify := .Notifies}}
+type notify{{$notify.Model.Name}} struct {
+	{{if $notify.OnInsert}}onInsert []func({{$notify.Model.Name}}){{end}}
+	{{if $notify.OnUpdate}}onUpdate []func({{$notify.Model.Name}}, {{$notify.Model.Name}}){{end}}
+	{{if $notify.OnDelete}}onDelete []func({{$notify.Model.Name}}){{end}}
+}
+{{if $notify.OnInsert -}}
+func (ne *notify{{$notify.Model.Name}}) OnInsert(callback func({{$notify.Model.Name}})) {
+	ne.onInsert = append(ne.onInsert, callback)
+}
+{{- end}}
+{{if $notify.OnUpdate -}}
+func (ne *notify{{$notify.Model.Name}}) OnUpdate(callback func({{$notify.Model.Name}}, {{$notify.Model.Name}})) {
+	ne.onUpdate = append(ne.onUpdate, callback)
+}
+{{- end}}
+{{if $notify.OnDelete -}}
+func (ne *notify{{$notify.Model.Name}}) OnDelete(callback func({{$notify.Model.Name}})) {
+	ne.onDelete = append(ne.onDelete, callback)
+}
+{{- end}}
+{{- end -}}
+
+{{if .HasNotify}}
+var PgNotify pgNotify
+type pgNotify struct {
+	{{- range $notify := .Notifies}}
+	{{$notify.Model.Name}} notify{{$notify.Model.Name}}
+	{{- end}}
+}
+func pgNotifyOnInsert(newModel model) {
+	switch newModel.tableName() {
+		{{- range $notify := .Notifies -}}
+		{{- if $notify.OnInsert}}
+		case "{{$notify.Model.TableName}}":
+			for _, callback := range PgNotify.{{$notify.Model.Name}}.onInsert {
+				callback(newModel.({{$notify.Model.Name}}))
+			}
+		{{- end -}}
+		{{- end}}
+		default:
+			log.Println("PgNotify.OnInsert for model \""+newModel.tableName()+"\" that ggm not generated for. Run ggmgen!")
+	}
+}
+func pgNotifyOnUpdate(oldModel model, newModel model) {
+	switch newModel.tableName() {
+		{{- range $notify := .Notifies -}}
+		{{- if $notify.OnUpdate}}
+		case "{{$notify.Model.TableName}}":
+			for _, callback := range PgNotify.{{$notify.Model.Name}}.onUpdate {
+				callback(oldModel.({{$notify.Model.Name}}), newModel.({{$notify.Model.Name}}))
+			}
+		{{- end -}}
+		{{- end}}
+		default:
+			log.Println("PgNotify.OnUpdate for model \""+newModel.tableName()+"\" that ggm not generated for. Run ggmgen!")
+	}
+}
+func pgNotifyOnDelete(oldModel model) {
+	switch oldModel.tableName() {
+		{{- range $notify := .Notifies}}
+		{{- if $notify.OnDelete}}
+		case "{{$notify.Model.TableName}}":
+			for _, callback := range PgNotify.{{$notify.Model.Name}}.onDelete {
+				callback(oldModel.({{$notify.Model.Name}}))
+			}
+		{{- end}}
+		{{- end}}
+		default:
+			log.Println("PgNotify.OnDelete for model \""+oldModel.tableName()+"\" that ggm not generated for. Run ggmgen!")
+	}
+}
+
+var pqListener *pq.Listener
+func initPgListener(name string) error {
+	pqListener = pq.NewListener(name, 10*time.Second, time.Minute, func(ev pq.ListenerEventType, err error) {
+		if err != nil {
+			panic("Error when initializing pq Listener (for NOTIFY/LISTEN): "+err.Error())
+		}
+	})
+
+	{{range $notify := .Notifies -}}
+		{{- if $notify.OnInsert}}
+	pqListener.Listen("{{$notify.Model.Name}}_Insert")
+		{{- end -}}
+		{{- if $notify.OnUpdate}}
+	pqListener.Listen("{{$notify.Model.Name}}_Update")
+		{{- end -}}
+		{{- if $notify.OnDelete}}
+	pqListener.Listen("{{$notify.Model.Name}}_Delete")
+		{{- end -}}
+	{{- end}}
+
+	go func() {
+		for {
+			select {
+				case notify := <-pqListener.Notify:
+					{{range $notify := .Notifies}}
+						var convertPayloadToModel{{$notify.Model.Name}} = func(payload string) {{$notify.Model.Name}} {
+							strFields := strings.Split(payload, ",")
+							var new{{$notify.Model.Name}} {{$notify.Model.Name}}
+							{{range $fi, $field := $notify.Fields}}
+								if decoding_err := json.Unmarshal([]byte(strFields[{{$fi}}]), &new{{$notify.Model.Name}}.{{$field.Name}}); decoding_err != nil {
+									log.Println("error when unmarshalling field: "+decoding_err.Error())
+								}
+							{{end}}
+							return new{{$notify.Model.Name}}
+						}
+						{{if $notify.OnInsert -}}
+						if notify.Channel == "{{$notify.Model.Name}}_Insert" {
+							pgNotifyOnInsert(convertPayloadToModel{{$notify.Model.Name}}(notify.Extra))
+						}
+						{{- end -}}
+						{{- if $notify.OnUpdate}}
+						if notify.Channel == "{{$notify.Model.Name}}_Update" {
+							parts := strings.Split(notify.Extra, ";")
+							pgNotifyOnUpdate(convertPayloadToModel{{$notify.Model.Name}}(parts[0]), convertPayloadToModel{{$notify.Model.Name}}(parts[1]))
+						}
+						{{- end -}}
+						{{- if $notify.OnDelete}}
+						if notify.Channel == "{{$notify.Model.Name}}_Delete" {
+							pgNotifyOnDelete(convertPayloadToModel{{$notify.Model.Name}}(notify.Extra))
+						}
+						{{- end -}}
+
+					{{end}}
+			}
+		}
+	}()
+	return nil
+}
+{{end}}
 `
