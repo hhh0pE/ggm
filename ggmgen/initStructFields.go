@@ -7,6 +7,8 @@ import (
 
 	"log"
 
+	"fmt"
+
 	"github.com/hhh0pE/ggm/ggmgen/fieldType"
 )
 
@@ -41,6 +43,7 @@ func initStructFields(typesInfo *types.Package, modelS *ModelStruct) {
 		return
 	}
 
+	//fmt.Println(modelS.Name)
 	for i := 0; i < modelStruct.NumFields(); i++ {
 		foundFields := scanField(modelStruct.Field(i))
 		fieldTags := ParseFieldTags(modelStruct.Tag(i))
@@ -60,8 +63,10 @@ func initStructFields(typesInfo *types.Package, modelS *ModelStruct) {
 				ff.Relation.field = &ff
 			}
 			modelS.AddField(ff)
+			//fmt.Printf("%s: %#v\n", ff.Name, ff.Type)
 		}
 	}
+	//fmt.Println()
 }
 
 func scanField(field *types.Var) []modelField {
@@ -82,28 +87,34 @@ func scanField(field *types.Var) []modelField {
 		underlying = typePointer.Elem().Underlying()
 	}
 
-	if typeBasic, ok := underlying.(*types.Basic); ok {
-		kind := typeBasic.Kind()
+	var detectBasicType = func(bt *types.Basic, nmf *modelField) {
+		kind := bt.Kind()
 		switch {
 		case types.Int <= kind && kind <= types.Uint64:
-			newModelField.Type.ConstType = fieldType.IntType
+			nmf.Type.ConstType = fieldType.IntType
 		case types.Float32 == kind || kind == types.Float64:
-			newModelField.Type.ConstType = fieldType.FloatType
+			nmf.Type.ConstType = fieldType.FloatType
 		case kind == types.String:
-			newModelField.Type.ConstType = fieldType.TextType
+			nmf.Type.ConstType = fieldType.TextType
 		case kind == types.Bool:
-			newModelField.Type.ConstType = fieldType.BoolType
+			nmf.Type.ConstType = fieldType.BoolType
 		default:
-			return nil
+			return
 		}
-		//if isPointer {
-		//	newModelField.Type.IsNullable = true
-		//}
+
+	}
+
+	if typeBasic, ok := underlying.(*types.Basic); ok {
+		detectBasicType(typeBasic, &newModelField)
 		newModelFields = append(newModelFields, newModelField)
 		return newModelFields
 	}
+
 	if typeSlice, ok := underlying.(*types.Slice); ok {
 		if sliceElem, ok2 := typeSlice.Elem().(*types.Named); ok2 {
+			if isImplementSqlScannerInterface(sliceElem.Obj()) {
+				fmt.Println(sliceElem.Obj().Name())
+			}
 			if foundModel := pkgS.GetModel(sliceElem.Obj().Name()); foundModel != nil {
 				log.Println("Found slice of models. Skipping field..")
 				return nil
@@ -116,9 +127,14 @@ func scanField(field *types.Var) []modelField {
 				//newModelFields = append(newModelFields, newModelField)
 				//return newModelFields
 			}
-			//if isImplementModelInterface(sliceElem.Obj()) {
 
-			//}
+		}
+		if basicElem, ok := typeSlice.Elem().(*types.Basic); ok {
+			detectBasicType(basicElem, &newModelField)
+			newModelField.Type.IsArray = true
+			newModelFields = append(newModelFields, newModelField)
+			return newModelFields
+
 		}
 	}
 	if typeStruct, ok := underlying.(*types.Struct); ok {
@@ -149,6 +165,7 @@ func scanField(field *types.Var) []modelField {
 			var typeNamed *types.Named
 			//fmt.Println(reflect.TypeOf(fType))
 			if typePointer, ok := fType.(*types.Pointer); ok {
+				newModelField.Type.IsNullable = true
 				typeNamed = typePointer.Elem().(*types.Named)
 			}
 			if tNamed, ok := fType.(*types.Named); ok {
@@ -168,9 +185,23 @@ func scanField(field *types.Var) []modelField {
 				newModelField.Type = fieldType.Date
 			case "github.com/lib/pq.NullTime":
 				newModelField.Type = fieldType.DateNullable
+
+			//case "github.com/lib/pq.StringArray":
+			//	newModelField.Type.ConstType = fieldType.TextType
+			//	newModelField.Type.IsArray = true
+			//case "github.com/lib/pq.Int64Array":
+			//	newModelField.Type.ConstType = fieldType.IntType
+			//	newModelField.Type.IsArray = true
+			//case "github.com/lib/pq.Float64Array":
+			//	newModelField.Type.ConstType = fieldType.FloatType
+			//	newModelField.Type.IsArray = true
+			//case "github.com/lib/pq.BoolArray":
+			//	newModelField.Type.ConstType = fieldType.BoolType
+			//	newModelField.Type.IsArray = true
 			default:
 				isSqlField := isImplementSqlScannerInterface(typeNamed.Obj())
 				if isSqlField {
+					fmt.Println("isSqlField", typeNamed.Obj().Name())
 					if typeStruct.NumFields() == 1 {
 						if scannedFields := scanField(typeStruct.Field(0)); len(scannedFields) > 0 {
 							scannedField := scannedFields[0]

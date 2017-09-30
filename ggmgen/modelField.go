@@ -148,35 +148,6 @@ func (mf modelField) SqlType() string {
 	if mf.IsPrimaryKey {
 		return "SERIAL PRIMARY KEY"
 	}
-	var sqlType string
-	switch mf.Type.ConstType {
-	case fieldType.BoolType:
-		sqlType = "BOOLEAN"
-	case fieldType.IntType:
-		sqlType = "BIGINT"
-	case fieldType.FloatType:
-		sqlType = "REAL"
-	case fieldType.TextType:
-		if mf.Type.MaxSize > 0 && mf.Type.MaxSize < 255 {
-			sqlType = fmt.Sprintf("VARCHAR(%d)", mf.Type.MaxSize)
-		} else {
-			sqlType = "TEXT"
-		}
-	case fieldType.DateType:
-		sqlType = "TIMESTAMP WITH TIME ZONE"
-	default:
-		return ""
-	}
-
-	if mf.Type.IsNullable {
-		sqlType += " NULL"
-	} else {
-		sqlType += " NOT NULL"
-	}
-	return sqlType
-	if mf.IsPrimaryKey {
-		return "SERIAL"
-	}
 	return mf.Type.SqlType()
 }
 

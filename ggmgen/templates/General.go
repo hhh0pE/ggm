@@ -402,4 +402,26 @@ func initPgListener(name string) error {
 	return nil
 }
 {{end}}
+
+
+func boolArrayToSqlValue(arr []bool) string {
+	sqlVal, _ := pq.BoolArray(arr).Value()
+	return sqlVal.(string)
+}
+func int64ArrayToSqlValue(arr []int64) string {
+	sqlVal, _ := pq.Int64Array(arr).Value()
+	return sqlVal.(string)
+}
+func float64ArrayToSqlValue(arr []float64) string {
+	sqlVal, _ := pq.Float64Array(arr).Value()
+	return sqlVal.(string)
+}
+func stringArrayToSqlValue(arr []string) string {
+	sqlVal, _ := pq.StringArray(arr).Value()
+	return sqlVal.(string)
+}
+func byteArrayToSqlValue(arr [][]byte) string {
+	sqlVal, _ := pq.ByteaArray(arr).Value()
+	return sqlVal.(string)
+}
 `

@@ -118,4 +118,41 @@ func (wfs *whereFieldString{{.ModelName}}) NotIn(val []string) *{{lower .ModelNa
 	wfs.where.addCond("\"" + wfs.name + "\" NOT IN ('" + strings.Join(val, "', '") + "')'")
 	return wfs.where
 }
+func (wfs *whereFieldString{{.ModelName}}) LengthIs(len int) *{{lower .ModelName}}Where {
+	wfs.where.andOr()
+	wfs.where.addCond("length(\"" + wfs.name + "\") = '"+fmt.Sprintf("%d", len)+"'")
+	return wfs.where
+}
+func (wfs *whereFieldString{{.ModelName}}) LengthLessThan(len int) *{{lower .ModelName}}Where {
+	wfs.where.andOr()
+	wfs.where.addCond("length(\"" + wfs.name + "\") < '"+fmt.Sprintf("%d", len)+"'")
+	return wfs.where
+}
+func (wfs *whereFieldString{{.ModelName}}) LengthLT(len int) *{{lower .ModelName}}Where {
+	return wfs.LengthLessThan(len)
+}
+func (wfs *whereFieldString{{.ModelName}}) LengthGreaterThan(len int) *{{lower .ModelName}}Where {
+	wfs.where.andOr()
+	wfs.where.addCond("length(\"" + wfs.name + "\") > '"+fmt.Sprintf("%d", len)+"'")
+	return wfs.where
+}
+func (wfs *whereFieldString{{.ModelName}}) LengthGT(len int) *{{lower .ModelName}}Where {
+	return wfs.LengthGreaterThan(len)
+}
+func (wfs *whereFieldString{{.ModelName}}) LengthGreaterThanOrEqual(len int) *{{lower .ModelName}}Where {
+	wfs.where.andOr()
+	wfs.where.addCond("length(\"" + wfs.name + "\") >= '"+fmt.Sprintf("%d", len)+"'")
+	return wfs.where
+}
+func (wfs *whereFieldString{{.ModelName}}) LengthGTE(len int) *{{lower .ModelName}}Where {
+	return wfs.LengthGreaterThanOrEqual(len)
+}
+func (wfs *whereFieldString{{.ModelName}}) LengthLessThanOrEqual(len int) *{{lower .ModelName}}Where {
+	wfs.where.andOr()
+	wfs.where.addCond("length(\"" + wfs.name + "\") <= '"+fmt.Sprintf("%d", len)+"'")
+	return wfs.where
+}
+func (wfs *whereFieldString{{.ModelName}}) LengthLTE(len int) *{{lower .ModelName}}Where {
+	return wfs.LengthLessThanOrEqual(len)
+}
 `

@@ -7,6 +7,16 @@ func ({{abbr .Name}} {{.Name}}) tableName() string {
 	return "{{.TableName}}"
 }
 
+func isEmpty{{.Name}}({{abbr .Name}} {{.Name}}) bool {
+	{{- range $field := .Fields}}
+	if {{if $field.Type.IsNullable}}{{abbr $.Name}}.{{$field.Name}} != nil && *{{end -}}
+	{{abbr $.Name}}.{{$field.FieldValueName}} != {{$field.DefaultValue}} {
+		return false
+	}
+	{{- end}}
+	return true
+}
+
 func ({{abbr .Name}} *{{.Name}}) Save() error {
 	if inserting_err := {{abbr .Name}}.Insert(); inserting_err != nil {
 		if pqInsertingErr, ok := inserting_err.(*pq.Error); ok {
@@ -23,7 +33,7 @@ func ({{abbr .Name}} *{{.Name}}) Save() error {
 	{{if gt (len .Indexes) 0}}
 			if {{range $ii, $index := .Indexes -}}
 			{{range $ifi, $indexField := $index.Fields -}}
-				{{- if $indexField.Type.IsNullable}}{{abbr $.Name}}.{{$indexField.FieldValueName}} != nil && *{{end -}}
+				{{- if and $indexField.Type.IsNullable (not $indexField.IsForeignKey)}}{{abbr $.Name}}.{{$indexField.FieldValueName}} != nil && *{{end -}}
 				{{- abbr $.Name}}.{{$indexField.FieldValueName}} != {{$indexField.DefaultValue -}}
 				{{- if IsNotLastElement $ifi (len $index.Fields)}} && {{end -}}
 			{{end}} {

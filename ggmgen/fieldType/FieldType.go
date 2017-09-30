@@ -13,34 +13,51 @@ type FieldType struct {
 	Size       uint
 	MaxSize    uint
 	IsNullable bool
+	IsArray    bool
 }
 
 func (ft FieldType) Template() string {
 	switch {
-	case ft.ConstType == IntType && !ft.IsNullable:
+	case ft.ConstType == IntType:
+		if ft.IsArray {
+			return fields.IntegerArrayTemplate
+		}
+		if ft.IsNullable {
+			return fields.IntegerNullableTemplate
+		}
 		return fields.IntegerTemplate
-	case ft.ConstType == IntType && ft.IsNullable:
-		return fields.IntegerNullableTemplate
-
-	case ft.ConstType == BoolType && !ft.IsNullable:
-		return fields.BooleanTemplate
-	case ft.ConstType == BoolType && ft.IsNullable:
-		return fields.BooleanNullableTemplate
-
-	case ft.ConstType == TextType && !ft.IsNullable:
-		return fields.StringTemplate
-	case ft.ConstType == TextType && ft.IsNullable:
-		return fields.StringNullableTemplate
-
-	case ft.ConstType == FloatType && !ft.IsNullable:
+	case ft.ConstType == FloatType:
+		if ft.IsArray {
+			return fields.FloatArrayTemplate
+		}
+		if ft.IsNullable {
+			return fields.FloatNullableTemplate
+		}
 		return fields.FloatTemplate
-	case ft.ConstType == FloatType && ft.IsNullable:
-		return fields.FloatNullableTemplate
+	case ft.ConstType == BoolType:
+		if ft.IsArray {
+			return fields.BooleanArrayTemplate
+		}
+		if ft.IsNullable {
+			return fields.BooleanNullableTemplate
+		}
+		return fields.BooleanTemplate
+	case ft.ConstType == TextType:
+		if ft.IsArray {
+			return fields.StringArrayTemplate
+		}
+		if ft.IsNullable {
+			return fields.StringNullableTemplate
+		}
+		return fields.StringTemplate
+	case ft.ConstType == DateType:
+		if ft.IsArray {
 
-	case ft.ConstType == DateType && !ft.IsNullable:
+		}
+		if ft.IsNullable {
+			return fields.DateNullableTemplate
+		}
 		return fields.DateTemplate
-	case ft.ConstType == DateType && ft.IsNullable:
-		return fields.DateNullableTemplate
 	}
 	return ""
 }
@@ -59,19 +76,23 @@ func (ft FieldType) SqlType() string {
 	case BoolType:
 		sqlType = "BOOLEAN"
 	case IntType:
-		sqlType = "INTEGER"
+		sqlType = "BIGINT"
 	case FloatType:
 		sqlType = "REAL"
 	case TextType:
-		if ft.MaxSize > 0 && ft.MaxSize < 255 {
+		if ft.MaxSize > 0 && ft.MaxSize <= 255 {
 			sqlType = fmt.Sprintf("VARCHAR(%d)", ft.MaxSize)
 		} else {
 			sqlType = "TEXT"
 		}
 	case DateType:
-		sqlType = "TIMESTAMP"
+		sqlType = "TIMESTAMP WITH TIME ZONE"
 	default:
 		return ""
+	}
+
+	if ft.IsArray {
+		sqlType += "[]"
 	}
 
 	if ft.IsNullable {
@@ -79,6 +100,7 @@ func (ft FieldType) SqlType() string {
 	} else {
 		sqlType += " NOT NULL"
 	}
+
 	return sqlType
 }
 
@@ -97,7 +119,9 @@ func (ft FieldType) Name() string {
 		name = "Date"
 	}
 
-	if ft.IsNullable {
+	if ft.IsArray {
+		name += "Array"
+	} else if ft.IsNullable {
 		name += "Nullable"
 	}
 	return name
@@ -120,6 +144,9 @@ func (ft FieldType) FmtReplacer() string {
 }
 
 func (ft FieldType) DefaultValue() string {
+	if ft.IsArray {
+		return "nil"
+	}
 	switch ft.ConstType {
 	case IntType:
 		return "0"

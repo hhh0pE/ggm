@@ -32,9 +32,7 @@ func (wfi whereFieldInteger{{.ModelName}}) GreaterThan(val int) *{{lower .ModelN
 	return wfi.where
 }
 func (wfi whereFieldInteger{{.ModelName}}) GT(val int) *{{lower .ModelName}}Where {
-	wfi.where.andOr()
-	wfi.where.addCond(fmt.Sprintf("\""+wfi.name+"\" > '%d'", val))
-	return wfi.where
+	return wfi.GreaterThan(val)
 }
 func (wfi whereFieldInteger{{.ModelName}}) GreaterThanOrEqual(val int) *{{lower .ModelName}}Where {
 	wfi.where.andOr()
@@ -42,9 +40,7 @@ func (wfi whereFieldInteger{{.ModelName}}) GreaterThanOrEqual(val int) *{{lower 
 	return wfi.where
 }
 func (wfi whereFieldInteger{{.ModelName}}) GTE(val int) *{{lower .ModelName}}Where {
-	wfi.where.andOr()
-	wfi.where.addCond(fmt.Sprintf("\""+wfi.name+"\" >= '%d'", val))
-	return wfi.where
+	return wfi.GreaterThanOrEqual(val)
 }
 func (wfi whereFieldInteger{{.ModelName}}) LessThan(val int) *{{lower .ModelName}}Where {
 	wfi.where.andOr()
@@ -52,9 +48,7 @@ func (wfi whereFieldInteger{{.ModelName}}) LessThan(val int) *{{lower .ModelName
 	return wfi.where
 }
 func (wfi whereFieldInteger{{.ModelName}}) LT(val int) *{{lower .ModelName}}Where {
-	wfi.where.andOr()
-	wfi.where.addCond(fmt.Sprintf("\""+wfi.name+"\" < '%d'", val))
-	return wfi.where
+	return wfi.LessThan(val)
 }
 func (wfi whereFieldInteger{{.ModelName}}) LessThanOrEqual(val int) *{{lower .ModelName}}Where {
 	wfi.where.andOr()
@@ -62,9 +56,7 @@ func (wfi whereFieldInteger{{.ModelName}}) LessThanOrEqual(val int) *{{lower .Mo
 	return wfi.where
 }
 func (wfi whereFieldInteger{{.ModelName}}) LTE(val int) *{{lower .ModelName}}Where {
-	wfi.where.andOr()
-	wfi.where.addCond(fmt.Sprintf("\""+wfi.name+"\" <= '%d'", val))
-	return wfi.where
+	return wfi.LessThanOrEqual(val)
 }
 
 func (wfi whereFieldInteger{{.ModelName}}) Between(left, right int) *{{lower .ModelName}}Where {
