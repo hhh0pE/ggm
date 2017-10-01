@@ -2,6 +2,7 @@ package ggm
 
 import (
 	"github.com/shopspring/decimal"
+	"math/big"
 )
 
 type Decimal struct {
@@ -51,6 +52,17 @@ type Money = Decimal
 func NewDecimal(x float64) Decimal {
 	return Decimal{decimal.NewFromFloat(x)}
 }
+func NewDecimalFromString(str string) (Decimal, error) {
+	dec, err := decimal.NewFromString(str)
+	return Decimal{dec}, err
+}
+func NewDecimalFromBigInt(bigInt *big.Int, exp int32) Decimal {
+	return Decimal{decimal.NewFromBigInt(bigInt, exp)}
+}
+func NewFromFloatWithExponent(val float64, exp int32) Decimal {
+	return Decimal{decimal.NewFromFloatWithExponent(val, exp)}
+}
+
 func NewMoney(x float64) Money {
 	return Money{decimal.NewFromFloat(x)}
 }
