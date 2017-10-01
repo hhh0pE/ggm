@@ -176,7 +176,7 @@ func scanField(field *types.Var) []modelField {
 			case "database/sql.NullInt64":
 				newModelField.Type = fieldType.IntegerNullable
 			case "database/sql.NullFloat64":
-				newModelField.Type = fieldType.NumericNullable
+				newModelField.Type = fieldType.FloatNullable
 			case "database/sql.NullString":
 				newModelField.Type = fieldType.TextNullable
 			case "database/sql.NullBool":
@@ -185,6 +185,10 @@ func scanField(field *types.Var) []modelField {
 				newModelField.Type = fieldType.Date
 			case "github.com/lib/pq.NullTime":
 				newModelField.Type = fieldType.DateNullable
+			case "github.com/hhh0pE/ggm.Decimal":
+				fallthrough
+			case "github.com/hhhh0pE/ggm.Money":
+				newModelField.Type = fieldType.Decimal
 
 			//case "github.com/lib/pq.StringArray":
 			//	newModelField.Type.ConstType = fieldType.TextType

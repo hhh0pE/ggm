@@ -2,8 +2,7 @@ package fields
 
 const FloatNullableTemplate = `
 type whereFieldFloatNullable{{.ModelName}} struct {
-	name  string
-	where modelWhere
+	whereFieldFloat{{.ModelName}}
 }
 
 func (wff whereFieldFloat{{.ModelName}}) IsNull() *{{lower .ModelName}}Where {

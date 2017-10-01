@@ -109,6 +109,7 @@ func (mf modelField) FieldValueName() string {
 	if mf.Type.ConstType == fieldType.DateType {
 		return mf.Name + ".Unix()"
 	}
+
 	if mf.IsForeignKey {
 		return mf.Name + "." + mf.Relation.modelTo.PrimaryKey().FieldValueName()
 	}

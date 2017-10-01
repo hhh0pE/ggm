@@ -34,6 +34,14 @@ func (ft FieldType) Template() string {
 			return fields.FloatNullableTemplate
 		}
 		return fields.FloatTemplate
+	case ft.ConstType == DecimalType:
+		if ft.IsArray {
+			return fields.DecimalArrayTemplate
+		}
+		if ft.IsNullable {
+			return fields.DecimalNullableTemplate
+		}
+		return fields.DecimalTemplate
 	case ft.ConstType == BoolType:
 		if ft.IsArray {
 			return fields.BooleanArrayTemplate
@@ -66,6 +74,7 @@ const (
 	BoolType ConstFieldType = iota + 1
 	IntType
 	FloatType
+	DecimalType
 	TextType
 	DateType
 )
@@ -79,6 +88,8 @@ func (ft FieldType) SqlType() string {
 		sqlType = "BIGINT"
 	case FloatType:
 		sqlType = "REAL"
+	case DecimalType:
+		sqlType = "NUMERIC"
 	case TextType:
 		if ft.MaxSize > 0 && ft.MaxSize <= 255 {
 			sqlType = fmt.Sprintf("VARCHAR(%d)", ft.MaxSize)
@@ -111,6 +122,8 @@ func (ft FieldType) Name() string {
 		name = "Integer"
 	case FloatType:
 		name = "Float"
+	case DecimalType:
+		name = "Decimal"
 	case TextType:
 		name = "String"
 	case BoolType:
@@ -139,6 +152,8 @@ func (ft FieldType) FmtReplacer() string {
 		return "%t"
 	case DateType:
 		return "%s"
+	case DecimalType:
+		return "%s"
 	}
 	return ""
 }
@@ -152,6 +167,8 @@ func (ft FieldType) DefaultValue() string {
 		return "0"
 	case FloatType:
 		return "0.0"
+	case DecimalType:
+		return "ggm.NewDecimal(0)"
 	case TextType:
 		return "\"\""
 	case BoolType:
@@ -170,8 +187,10 @@ func GetAllFieldTypes() []FieldType {
 		DateNullable,
 		Integer,
 		IntegerNullable,
-		Numeric,
-		NumericNullable,
+		Float,
+		FloatNullable,
+		Decimal,
+		DecimalNullable,
 		Text,
 		TextNullable,
 		VarChar,

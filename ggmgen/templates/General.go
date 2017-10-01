@@ -424,4 +424,11 @@ func byteArrayToSqlValue(arr [][]byte) string {
 	sqlVal, _ := pq.ByteaArray(arr).Value()
 	return sqlVal.(string)
 }
+func decimalArrayToSqlValue(arr []ggm.Decimal) string {
+	var values []string
+	for _, dec := range arr {
+		values = append(values, dec.String())
+	}
+	return stringArrayToSqlValue(values)
+}
 `
