@@ -9,8 +9,9 @@ import (
 
 	"fmt"
 
-	"github.com/hhh0pE/ggm/ggmgen/fieldType"
 	"strconv"
+
+	"github.com/hhh0pE/ggm/ggmgen/fieldType"
 )
 
 func initStructFields(typesInfo *types.Package, modelS *ModelStruct) {
@@ -46,8 +47,10 @@ func initStructFields(typesInfo *types.Package, modelS *ModelStruct) {
 
 	//fmt.Println(modelS.Name)
 	for i := 0; i < modelStruct.NumFields(); i++ {
+		if !modelStruct.Field(i).Exported() {
+			continue
+		}
 		foundFields := scanField(modelStruct.Field(i))
-
 
 		fieldTags := ParseFieldTags(modelStruct.Tag(i))
 		for fi, _ := range foundFields {

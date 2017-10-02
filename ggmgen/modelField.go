@@ -171,6 +171,7 @@ func (mf modelField) SqlType() string {
 	if mf.IsPrimaryKey {
 		return "SERIAL PRIMARY KEY"
 	}
+
 	return mf.Type().SqlType()
 }
 

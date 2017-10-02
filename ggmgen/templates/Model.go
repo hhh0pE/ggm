@@ -33,7 +33,7 @@ func ({{abbr .Name}} *{{.Name}}) Save() error {
 	{{if gt (len .Indexes) 0}}
 			if {{range $ii, $index := .Indexes -}}
 			{{range $ifi, $indexField := $index.Fields -}}
-				{{- if and $indexField.Type.IsNullable (not $indexField.IsForeignKey)}}{{$indexField.FieldValueName (abbr $.Name)}} != nil && {{end -}}
+				{{- if and $indexField.Type.IsNullable (not $indexField.IsForeignKey)}}{{abbr $.Name}}.{{$indexField.Name}} != nil && {{end -}}
 				{{- $indexField.FieldValueName (abbr $.Name)}} != {{$indexField.DefaultValue -}}
 				{{- if IsNotLastElement $ifi (len $index.Fields)}} && {{end -}}
 			{{end}} {

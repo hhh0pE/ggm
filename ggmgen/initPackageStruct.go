@@ -71,7 +71,7 @@ func initPackageStructs(pkg *ast.Package) (packageStruct, error) {
 					}
 				}
 			}
-			if fDecl, ok := d.(*ast.FuncDecl); ok {
+			if fDecl, ok := d.(*ast.FuncDecl); ok && fDecl.Recv != nil {
 				modelAbbr := fDecl.Recv.List[0].Names[0].Name
 				var modelName string
 
