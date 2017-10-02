@@ -9,8 +9,8 @@ func ({{abbr .Name}} {{.Name}}) tableName() string {
 
 func isEmpty{{.Name}}({{abbr .Name}} {{.Name}}) bool {
 	{{- range $field := .Fields}}
-	if {{if $field.Type.IsNullable}}{{abbr $.Name}}.{{$field.Name}} != nil && *{{end -}}
-	{{abbr $.Name}}.{{$field.FieldValueName}} != {{$field.DefaultValue}} {
+	if {{if $field.Type.IsNullable}}{{abbr $.Name}}.{{$field.Name}} != nil && {{end -}}
+	{{$field.FieldValueName (abbr $.Name)}} != {{$field.DefaultValue}} {
 		return false
 	}
 	{{- end}}
@@ -28,17 +28,17 @@ func ({{abbr .Name}} *{{.Name}}) Save() error {
 		var setStatement, whereClause []string
 
 		if {{range $pki, $pk := .PrimaryKeys}}{{abbr $.Name}}.{{$pk.Name}} != {{$pk.DefaultValue}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}} && {{end}}{{end}} {
-			{{range $pki, $pk := .PrimaryKeys}}whereClause = append(whereClause, fmt.Sprintf("\"{{$pk.TableName}}\" = '{{$pk.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$pk.FieldValueName}})){{end}}
+			{{range $pki, $pk := .PrimaryKeys}}whereClause = append(whereClause, fmt.Sprintf("\"{{$pk.TableName}}\" = '{{$pk.Type.FmtReplacer}}'", {{$pk.FieldValueName (abbr $.Name)}})){{end}}
 		} else {
 	{{if gt (len .Indexes) 0}}
 			if {{range $ii, $index := .Indexes -}}
 			{{range $ifi, $indexField := $index.Fields -}}
-				{{- if and $indexField.Type.IsNullable (not $indexField.IsForeignKey)}}{{abbr $.Name}}.{{$indexField.FieldValueName}} != nil && *{{end -}}
-				{{- abbr $.Name}}.{{$indexField.FieldValueName}} != {{$indexField.DefaultValue -}}
+				{{- if and $indexField.Type.IsNullable (not $indexField.IsForeignKey)}}{{$indexField.FieldValueName (abbr $.Name)}} != nil && {{end -}}
+				{{- $indexField.FieldValueName (abbr $.Name)}} != {{$indexField.DefaultValue -}}
 				{{- if IsNotLastElement $ifi (len $index.Fields)}} && {{end -}}
 			{{end}} {
 			{{range $ifi, $indexField := $index.Fields -}}
-			{{if true}}	{{end}}whereClause = append(whereClause, fmt.Sprintf("\"{{$indexField.TableName}}\" = '{{$indexField.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$indexField.FieldValueName}}))
+			{{if true}}	{{end}}whereClause = append(whereClause, fmt.Sprintf("\"{{$indexField.TableName}}\" = '{{$indexField.Type.FmtReplacer}}'", {{$indexField.FieldValueName (abbr $.Name)}}))
 			{{end -}}
 	}{{if IsNotLastElement $ii (len $.Indexes)}} else if {{end -}}
 		{{- end -}}
@@ -46,7 +46,7 @@ func ({{abbr .Name}} *{{.Name}}) Save() error {
 		}
 
 		{{range $fi, $field := .AllFields}}{{if not $field.IsPrimaryKey}}
-		setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.FieldValueName}}))
+		setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{$field.FieldValueName (abbr $.Name)}}))
 		{{- end}}{{end}}
 
 		_, err := Exec("UPDATE \"{{.TableName}}\" SET "+strings.Join(setStatement, ", ")+" WHERE "+strings.Join(whereClause, " AND "))
@@ -79,7 +79,7 @@ func ({{abbr .Name}} *{{.Name}}) Insert() error {
 	{{range $field := .AllFields -}}
 		{{if not $field.IsPrimaryKey}}
 	fieldTableNames = append(fieldTableNames, "\"{{$field.TableName}}\"")
-	fieldValues = append(fieldValues, fmt.Sprintf("'{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.FieldValueName}}))
+	fieldValues = append(fieldValues, fmt.Sprintf("'{{$field.Type.FmtReplacer}}'", {{$field.FieldValueName (abbr $.Name)}}))
 		{{- end -}}
 	{{- end}}
 
@@ -143,6 +143,40 @@ type {{lower .Name}}Query struct {
 	{{lower .Name}}OrderBy *{{lower .Name}}OrderBy
 }
 
+func scan{{.Name}}Row({{abbr .Name}} *{{.Name}}, fieldNames []string, row *sql.Rows) error {
+	var fieldPointers []interface{}
+	{{range $nsf := .NotScannerFields}}
+	var {{abbr $nsf.Name}}ForScan {{$nsf.Type.GoScannerType}}
+	{{- end}}
+	for i, _ := range fieldNames {
+		switch fieldNames[i] {
+	{{- range $field := .Fields}}
+		case "{{$field.TableName}}":
+			{{if $field.Type.ImplementScannerInterface -}}
+			fieldPointers = append(fieldPointers, &{{abbr $.Name}}.{{$field.Name}})
+			{{- else -}}
+			fieldPointers = append(fieldPointers, &{{abbr $field.Name}}ForScan)
+			{{end -}}
+	{{end}}
+		}
+	}
+
+	scan_err := row.Scan(fieldPointers...)
+	if scan_err != nil {
+		return scan_err
+	}
+
+	for i, _ := range fieldNames {
+		switch fieldNames[i] {
+	{{range $field := .NotScannerFields}}
+		case "{{$field.TableName}}":
+			{{abbr $.Name}}.{{$field.Name}} = scannerTypeToBaseType({{abbr $field.Name}}ForScan, {{abbr $.Name}}.{{$field.Name}}).({{$field.Type.GoBaseType}})
+	{{end}}
+		}
+	}
+
+	return nil
+}
 
 
 func ({{abbr .Name}} {{lower .Name}}Query) ALL() []{{.Name}} {
@@ -153,7 +187,8 @@ func ({{abbr .Name}} {{lower .Name}}Query) ALL() []{{.Name}} {
 	var {{lower .Name}}s []{{.Name}}
 	for rows.Next() {
 		var new{{.Name}} {{.Name}}
-		scan_err := rows.Scan(get{{.Name}}FieldPointers(&new{{.Name}}, {{abbr .Name}}.{{lower .Name}}Select.fieldNames())...)
+		scan_err := scan{{.Name}}Row(&new{{.Name}}, {{abbr .Name}}.{{lower .Name}}Select.fieldNames(), rows)
+		//scan_err := rows.Scan(get{{.Name}}FieldPointers(&new{{.Name}}, {{abbr .Name}}.{{lower .Name}}Select.fieldNames())...)
 		if scan_err != nil {
 			panic("scann err: " + scan_err.Error())
 		}

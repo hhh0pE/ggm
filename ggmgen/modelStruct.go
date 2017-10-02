@@ -170,9 +170,9 @@ func (ms ModelStruct) UniqueTypeFields() []modelField {
 		//	fmt.Println(f.Name, f.ConstType, f.ConstType.IsNullable)
 		//}
 
-		if f.Type.IsNullable {
+		if f.IsPointer {
 			f2 := f
-			f2.Type.IsNullable = false
+			f2.IsPointer = false
 			appendFieldWithUniqueType(&fTypes, f2)
 		}
 	}
@@ -186,10 +186,20 @@ func (ms ModelStruct) UniqueTypeFields() []modelField {
 	return fTypes
 }
 
+func (ms ModelStruct) NotScannerFields() []modelField {
+	var nsFields []modelField
+	for _, f := range ms.Fields() {
+		if !f.Type().ImplementScannerInterface() {
+			nsFields = append(nsFields, f)
+		}
+	}
+	return nsFields
+}
+
 func appendFieldWithUniqueType(fields *[]modelField, newField modelField) {
 	var exist bool
 	for _, f := range *fields {
-		if f.Type == newField.Type {
+		if f.Type().Name() == newField.Type().Name() {
 			exist = true
 			break
 		}

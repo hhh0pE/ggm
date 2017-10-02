@@ -5,6 +5,13 @@ import (
 	"math/big"
 )
 
+type DecimalArray []Decimal
+
+type NullDecimal struct {
+	Decimal Decimal
+	IsValid bool
+}
+
 type Decimal struct {
 	decimal.Decimal
 }

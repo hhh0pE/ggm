@@ -11,6 +11,7 @@ import (
 	"github.com/lib/pq"
 	"log"
 	"encoding/json"
+	"github.com/hhh0pE/ggm"
 )
 
 var ormDB *sql.DB
@@ -430,5 +431,155 @@ func decimalArrayToSqlValue(arr []ggm.Decimal) string {
 		values = append(values, dec.String())
 	}
 	return stringArrayToSqlValue(values)
+}
+
+
+func scannerTypeToBaseType(s interface{}, baseType interface{}) interface{} {
+	switch typedVal := s.(type) {
+	case pq.NullTime:
+		if _, ok := baseType.(*time.Time); ok {
+			if !typedVal.Valid {
+				return nil
+			}
+			return &typedVal.Time
+		}
+		if _, ok := baseType.(pq.NullTime); ok {
+			return typedVal
+		}
+	case sql.NullBool:
+		if _, ok := baseType.(*bool); ok {
+			if !typedVal.Valid {
+				return nil
+			}
+			return &typedVal.Bool
+		}
+		if _, ok := baseType.(sql.NullBool); ok {
+			return typedVal
+		}
+	case sql.NullString:
+		if _, ok := baseType.(*string); ok {
+			if !typedVal.Valid {
+				return nil
+			}
+			return &typedVal.String
+		}
+		if _, ok := baseType.(sql.NullString); ok {
+			return typedVal
+		}
+	case sql.NullInt64:
+		if _, ok := baseType.(*int64); ok {
+			if !typedVal.Valid {
+				return nil
+			}
+			return &typedVal.Int64
+		}
+		if _, ok := baseType.(sql.NullInt64); ok {
+			return typedVal
+		}
+	case sql.NullFloat64:
+		if _, ok := baseType.(*float64); ok {
+			if !typedVal.Valid {
+				return nil
+			}
+			return &typedVal.Float64
+		}
+		if _, ok := baseType.(sql.NullFloat64); ok {
+			return typedVal
+		}
+	case pq.StringArray:
+		if _, ok := baseType.([]string); ok {
+			return []string(typedVal)
+		}
+		if _, ok := baseType.(pq.StringArray); ok {
+			return typedVal
+		}
+	case *pq.StringArray:
+		if _, ok := baseType.(*[]string); ok {
+			if typedVal == nil {
+				return nil
+			}
+			val := []string(*typedVal)
+			return &val
+		}
+		if _, ok := baseType.(*pq.StringArray); ok {
+			return typedVal
+		}
+	case pq.BoolArray:
+		if _, ok := baseType.([]bool); ok {
+			return []bool(typedVal)
+		}
+		if _, ok := baseType.(pq.BoolArray); ok {
+			return typedVal
+		}
+	case *pq.BoolArray:
+		if _, ok := baseType.(*[]bool); ok {
+			if typedVal == nil {
+				return nil
+			}
+			val := []bool(*typedVal)
+			return &val
+		}
+		if _, ok := baseType.(*pq.BoolArray); ok {
+			return typedVal
+		}
+	//case pq.ByteaArray:
+	//	if _, ok := baseType.([][]byte); ok {
+	//		baseType = [][]byte(typedVal)
+	//	}
+	case pq.Float64Array:
+		if _, ok := baseType.([]float64); ok {
+			return []float64(typedVal)
+		}
+		if _, ok := baseType.(*pq.Float64Array); ok {
+			return typedVal
+		}
+	case *pq.Float64Array:
+		if _, ok := baseType.(*[]float64); ok {
+			if typedVal == nil {
+				return nil
+			}
+			val := []float64(*typedVal)
+			return &val
+		}
+		if _, ok := baseType.(*pq.Float64Array); ok {
+			return typedVal
+		}
+	case pq.Int64Array:
+		if _, ok := baseType.([]int64); ok {
+			return []int64(typedVal)
+		}
+	case *pq.Int64Array:
+		if _, ok := baseType.(*[]int64); ok {
+			if typedVal == nil {
+				return nil
+			}
+			val := []int64(*typedVal)
+			return &val
+		}
+		if _, ok := baseType.(*pq.Int64Array); ok {
+			return typedVal
+		}
+	case ggm.Decimal:
+		if _, ok := baseType.(float64); ok {
+			f64, _ := typedVal.Float64()
+			return f64
+		}
+		if _, ok := baseType.(ggm.Decimal); ok {
+			return typedVal
+		}
+	case *ggm.Decimal:
+		if _, ok := baseType.(*float64); ok {
+			f64, _ := typedVal.Float64()
+			return &f64
+		}
+		if _, ok := baseType.(*ggm.Decimal); ok {
+			return typedVal
+		}
+	default:
+		return errors.New(fmt.Sprintf("Cannot cast Scanner type to basic go type : %#v ", baseType))
+	}
+
+	// never catch that
+	return nil
 }
 `

@@ -1,74 +1,6 @@
 package fieldType
 
-import (
-	"fmt"
-
-	"github.com/hhh0pE/ggm/ggmgen/templates/fields"
-)
-
 type ConstFieldType uint
-
-type FieldType struct {
-	ConstType  ConstFieldType
-	Size       uint
-	MaxSize    uint
-	IsNullable bool
-	IsArray    bool
-}
-
-func (ft FieldType) Template() string {
-	switch {
-	case ft.ConstType == IntType:
-		if ft.IsArray {
-			return fields.IntegerArrayTemplate
-		}
-		if ft.IsNullable {
-			return fields.IntegerNullableTemplate
-		}
-		return fields.IntegerTemplate
-	case ft.ConstType == FloatType:
-		if ft.IsArray {
-			return fields.FloatArrayTemplate
-		}
-		if ft.IsNullable {
-			return fields.FloatNullableTemplate
-		}
-		return fields.FloatTemplate
-	case ft.ConstType == DecimalType:
-		if ft.IsArray {
-			return fields.DecimalArrayTemplate
-		}
-		if ft.IsNullable {
-			return fields.DecimalNullableTemplate
-		}
-		return fields.DecimalTemplate
-	case ft.ConstType == BoolType:
-		if ft.IsArray {
-			return fields.BooleanArrayTemplate
-		}
-		if ft.IsNullable {
-			return fields.BooleanNullableTemplate
-		}
-		return fields.BooleanTemplate
-	case ft.ConstType == TextType:
-		if ft.IsArray {
-			return fields.StringArrayTemplate
-		}
-		if ft.IsNullable {
-			return fields.StringNullableTemplate
-		}
-		return fields.StringTemplate
-	case ft.ConstType == DateType:
-		if ft.IsArray {
-
-		}
-		if ft.IsNullable {
-			return fields.DateNullableTemplate
-		}
-		return fields.DateTemplate
-	}
-	return ""
-}
 
 const (
 	BoolType ConstFieldType = iota + 1
@@ -79,121 +11,276 @@ const (
 	DateType
 )
 
-func (ft FieldType) SqlType() string {
-	var sqlType string
-	switch ft.ConstType {
+func (cft ConstFieldType) BaseType(isNullable, isArray, isGoBaseType bool) FieldType {
+	switch cft {
 	case BoolType:
-		sqlType = "BOOLEAN"
+		var ft Boolean
+		ft.IsNullable = isNullable
+		ft.IsArray = isArray
+		ft.IsGoBaseType = isGoBaseType
+		return &ft
 	case IntType:
-		sqlType = "BIGINT"
+		var ft Integer
+		ft.IsNullable = isNullable
+		ft.IsArray = isArray
+		ft.IsGoBaseType = isGoBaseType
+		return &ft
 	case FloatType:
-		sqlType = "REAL"
-	case DecimalType:
-		sqlType = "NUMERIC"
+		var ft Float
+		ft.IsNullable = isNullable
+		ft.IsArray = isArray
+		ft.IsGoBaseType = isGoBaseType
+		return &ft
 	case TextType:
-		if ft.MaxSize > 0 && ft.MaxSize <= 255 {
-			sqlType = fmt.Sprintf("VARCHAR(%d)", ft.MaxSize)
-		} else {
-			sqlType = "TEXT"
-		}
+		var ft Text
+		ft.IsNullable = isNullable
+		ft.IsArray = isArray
+		ft.IsGoBaseType = isGoBaseType
+		return &ft
 	case DateType:
-		sqlType = "TIMESTAMP WITH TIME ZONE"
-	default:
-		return ""
+		var ft Date
+		ft.IsNullable = isNullable
+		ft.IsArray = isArray
+		ft.IsGoBaseType = isGoBaseType
+		return &ft
+	case DecimalType:
+		var ft Decimal
+		ft.IsNullable = isNullable
+		ft.IsArray = isArray
+		ft.IsGoBaseType = isGoBaseType
+		return &ft
 	}
-
-	if ft.IsArray {
-		sqlType += "[]"
-	}
-
-	if ft.IsNullable {
-		sqlType += " NULL"
-	} else {
-		sqlType += " NOT NULL"
-	}
-
-	return sqlType
+	return nil
 }
 
-func (ft FieldType) Name() string {
-	var name string
-	switch ft.ConstType {
-	case IntType:
-		name = "Integer"
-	case FloatType:
-		name = "Float"
-	case DecimalType:
-		name = "Decimal"
-	case TextType:
-		name = "String"
-	case BoolType:
-		name = "Boolean"
-	case DateType:
-		name = "Date"
-	}
+type FieldType interface {
+	Name() string
+	SqlType() string
+	WhereTemplate() string
+	FmtReplacer() string
+	DefaultValue() string
+	GoBaseType() string
+	GoScannerType() string
 
-	if ft.IsArray {
-		name += "Array"
-	} else if ft.IsNullable {
-		name += "Nullable"
+	MaxSize() int
+	Nullable() bool
+	Array() bool
+
+	ConstType() ConstFieldType
+	ImplementScannerInterface() bool
+}
+
+func sqlType(sqlTypeName string, ft FieldType) string {
+	if ft.Array() {
+		return sqlTypeName + "[]"
+	}
+	if ft.Nullable() {
+		return sqlTypeName + " NOT NULL"
+	}
+	return sqlTypeName
+}
+
+func name(name string, ft FieldType) string {
+	if ft.Array() {
+		return name + "Array"
+	}
+	if ft.Nullable() {
+		return name + "Nullable"
 	}
 	return name
 }
 
-func (ft FieldType) FmtReplacer() string {
-	switch ft.ConstType {
-	case IntType:
-		return "%d"
-	case FloatType:
-		return "%f"
-	case TextType:
-		return "%s"
-	case BoolType:
-		return "%t"
-	case DateType:
-		return "%s"
-	case DecimalType:
-		return "%s"
+func goType(typeName string, ft FieldType) string {
+	if ft.Array() {
+		if ft.Nullable() {
+			return "*[]" + typeName
+		} else {
+			return "[]" + typeName
+		}
 	}
-	return ""
+	if ft.Nullable() {
+		return "*" + typeName
+	}
+	return typeName
 }
 
-func (ft FieldType) DefaultValue() string {
-	if ft.IsArray {
-		return "nil"
-	}
-	switch ft.ConstType {
-	case IntType:
-		return "0"
-	case FloatType:
-		return "0.0"
-	case DecimalType:
-		return "ggm.NewDecimal(0)"
-	case TextType:
-		return "\"\""
-	case BoolType:
-		return "false"
-	case DateType:
-		return "0"
-	}
-	return ""
-}
+//type FieldType struct {
+//	ConstType  ConstFieldType
+//	Size       uint
+//	MaxSize    uint
+//	IsNullable bool
+//	IsArray    bool
+//}
 
-func GetAllFieldTypes() []FieldType {
-	return []FieldType{
-		Boolean,
-		BooleanNullable,
-		Date,
-		DateNullable,
-		Integer,
-		IntegerNullable,
-		Float,
-		FloatNullable,
-		Decimal,
-		DecimalNullable,
-		Text,
-		TextNullable,
-		VarChar,
-		VarCharNullable,
-	}
-}
+//func (ft FieldType) Template() string {
+//	switch {
+//	case ft.ConstType == IntType:
+//		if ft.IsArray {
+//			return fields.IntegerArrayTemplate
+//		}
+//		if ft.IsNullable {
+//			return fields.IntegerNullableTemplate
+//		}
+//		return fields.IntegerTemplate
+//	case ft.ConstType == FloatType:
+//		if ft.IsArray {
+//			return fields.FloatArrayTemplate
+//		}
+//		if ft.IsNullable {
+//			return fields.FloatNullableTemplate
+//		}
+//		return fields.FloatTemplate
+//	case ft.ConstType == DecimalType:
+//		if ft.IsArray {
+//			return fields.DecimalArrayTemplate
+//		}
+//		if ft.IsNullable {
+//			return fields.DecimalNullableTemplate
+//		}
+//		return fields.DecimalTemplate
+//	case ft.ConstType == BoolType:
+//		if ft.IsArray {
+//			return fields.BooleanArrayTemplate
+//		}
+//		if ft.IsNullable {
+//			return fields.BooleanNullableTemplate
+//		}
+//		return fields.BooleanTemplate
+//	case ft.ConstType == TextType:
+//		if ft.IsArray {
+//			return fields.StringArrayTemplate
+//		}
+//		if ft.IsNullable {
+//			return fields.StringNullableTemplate
+//		}
+//		return fields.StringTemplate
+//	case ft.ConstType == DateType:
+//		if ft.IsArray {
+//
+//		}
+//		if ft.IsNullable {
+//			return fields.DateNullableTemplate
+//		}
+//		return fields.DateTemplate
+//	}
+//	return ""
+//}
+
+//func (ft FieldType) SqlType() string {
+//	var sqlType string
+//	switch ft.ConstType {
+//	case BoolType:
+//		sqlType = "BOOLEAN"
+//	case IntType:
+//		sqlType = "BIGINT"
+//	case FloatType:
+//		sqlType = "REAL"
+//	case DecimalType:
+//		sqlType = "NUMERIC"
+//	case TextType:
+//		if ft.MaxSize > 0 && ft.MaxSize <= 255 {
+//			sqlType = fmt.Sprintf("VARCHAR(%d)", ft.MaxSize)
+//		} else {
+//			sqlType = "TEXT"
+//		}
+//	case DateType:
+//		sqlType = "TIMESTAMP WITH TIME ZONE"
+//	default:
+//		return ""
+//	}
+//
+//	if ft.IsArray {
+//		sqlType += "[]"
+//	}
+//
+//	if ft.IsNullable {
+//		sqlType += " NULL"
+//	} else {
+//		sqlType += " NOT NULL"
+//	}
+//
+//	return sqlType
+//}
+//
+//func (ft FieldType) Name() string {
+//	var name string
+//	switch ft.ConstType {
+//	case IntType:
+//		name = "Integer"
+//	case FloatType:
+//		name = "Float"
+//	case DecimalType:
+//		name = "Decimal"
+//	case TextType:
+//		name = "String"
+//	case BoolType:
+//		name = "Boolean"
+//	case DateType:
+//		name = "Date"
+//	}
+//
+//	if ft.IsArray {
+//		name += "Array"
+//	} else if ft.IsNullable {
+//		name += "Nullable"
+//	}
+//	return name
+//}
+//
+//func (ft FieldType) FmtReplacer() string {
+//	switch ft.ConstType {
+//	case IntType:
+//		return "%d"
+//	case FloatType:
+//		return "%f"
+//	case TextType:
+//		return "%s"
+//	case BoolType:
+//		return "%t"
+//	case DateType:
+//		return "%s"
+//	case DecimalType:
+//		return "%s"
+//	}
+//	return ""
+//}
+//
+//func (ft FieldType) DefaultValue() string {
+//	if ft.IsArray {
+//		return "nil"
+//	}
+//	switch ft.ConstType {
+//	case IntType:
+//		return "0"
+//	case FloatType:
+//		return "0.0"
+//	case DecimalType:
+//		return "ggm.NewDecimal(0)"
+//	case TextType:
+//		return "\"\""
+//	case BoolType:
+//		return "false"
+//	case DateType:
+//		return "0"
+//	}
+//	return ""
+//}
+//
+//func GetAllFieldTypes() []FieldType {
+//	return []FieldType{
+//		Boolean,
+//		BooleanNullable,
+//		Date,
+//		DateNullable,
+//		Integer,
+//		IntegerNullable,
+//		Float,
+//		FloatNullable,
+//		Decimal,
+//		DecimalNullable,
+//		Text,
+//		TextNullable,
+//		VarChar,
+//		VarCharNullable,
+//	}
+//}

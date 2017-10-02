@@ -77,17 +77,26 @@ func (tfr tableForeignRelation) SqlAlterTable() string {
 //}
 
 type modelField struct {
-	Name         string
-	IsPointer    bool
+	Name string
+
 	IsPrimaryKey bool
 	IsForeignKey bool
-	Relation     *tableForeignRelation
-	Type         fieldType.FieldType
+
+	IsPointer    bool
+	IsGoBaseType bool
+	IsArray      bool
+	//Type fieldType.FieldType
+	ConstType fieldType.ConstFieldType
+	Relation  *tableForeignRelation
+
+	//Type         fieldType.FieldType
 
 	//ForeignKeys  []modelFieldFK
 	Tags []modelFieldTag
 
 	Model *ModelStruct
+
+	fieldType fieldType.FieldType
 }
 
 func (mf modelField) TableName() string {
@@ -99,21 +108,34 @@ func (mf modelField) TableName() string {
 	return tableName
 }
 
+func (mf modelField) Type() fieldType.FieldType {
+	if mf.fieldType == nil {
+		mf.fieldType = mf.ConstType.BaseType(mf.IsPointer, mf.IsArray, mf.IsGoBaseType)
+	}
+	return mf.fieldType
+}
+
 //func (mf modelField) IsHiddenField() bool {
 //	if mf.IsForeignKey && mf.Relation != nil && mf.Relation.IsManyRelation {
 //		return true
 //	}
 //	return false
 //}
-func (mf modelField) FieldValueName() string {
-	if mf.Type.ConstType == fieldType.DateType {
-		return mf.Name + ".Unix()"
+func (mf modelField) FieldValueName(objName string) string {
+	if mf.IsForeignKey {
+		return mf.Relation.modelTo.PrimaryKey().FieldValueName(objName)
 	}
 
-	if mf.IsForeignKey {
-		return mf.Name + "." + mf.Relation.modelTo.PrimaryKey().FieldValueName()
+	var fieldName = objName + "." + mf.Name
+	if mf.ConstType == fieldType.DateType {
+		return fieldName + ".Unix()"
 	}
-	return mf.Name
+
+	if mf.IsPointer {
+		fieldName = "*" + fieldName
+	}
+
+	return fieldName
 }
 
 func (mf modelField) DefaultValue() string {
@@ -121,10 +143,10 @@ func (mf modelField) DefaultValue() string {
 	//	mf.Type = fieldType.Integer
 	//}
 	//fmt.Println(mf.Model.Name, mf.Name, "defaultValue", mf.Type)
-	return mf.Type.DefaultValue()
+	return mf.Type().DefaultValue()
 }
 
-func (mf modelField) FindTag(names []string) (string, bool) {
+func (mf modelField) FindTag(names ...string) (string, bool) {
 	for _, name := range names {
 		if val, exist := mf.GetTag(name); exist {
 			return val, exist
@@ -149,7 +171,7 @@ func (mf modelField) SqlType() string {
 	if mf.IsPrimaryKey {
 		return "SERIAL PRIMARY KEY"
 	}
-	return mf.Type.SqlType()
+	return mf.Type().SqlType()
 }
 
 func (mf modelField) ExecuteTemplate() string {
@@ -159,7 +181,7 @@ func (mf modelField) ExecuteTemplate() string {
 	//	fmt.Println(mf.ConstType)
 	//}
 	var result = bytes.NewBufferString("")
-	tmpl, parsing_err := template.New("modelField").Funcs(funcsMap).Parse(mf.Type.Template())
+	tmpl, parsing_err := template.New("modelField").Funcs(funcsMap).Parse(mf.Type().WhereTemplate())
 	if parsing_err != nil {
 		panic(parsing_err)
 	}

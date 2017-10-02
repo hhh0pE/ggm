@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/hhh0pE/ggm/ggmgen/fieldType"
+	"strconv"
 )
 
 func initStructFields(typesInfo *types.Package, modelS *ModelStruct) {
@@ -46,15 +47,12 @@ func initStructFields(typesInfo *types.Package, modelS *ModelStruct) {
 	//fmt.Println(modelS.Name)
 	for i := 0; i < modelStruct.NumFields(); i++ {
 		foundFields := scanField(modelStruct.Field(i))
+
+
 		fieldTags := ParseFieldTags(modelStruct.Tag(i))
 		for fi, _ := range foundFields {
 			foundFields[fi].Tags = fieldTags
-			if sqlTag, exist := foundFields[fi].FindTag([]string{"sql", "ggm"}); exist {
-				sqlTag = strings.ToLower(sqlTag)
-				if sqlTag == "pk" || sqlTag == "primary_key" || sqlTag == "primarykey" {
-					foundFields[fi].IsPrimaryKey = true
-				}
-			}
+			scanTags(&foundFields[fi])
 		}
 
 		for _, ff := range foundFields {
@@ -69,6 +67,23 @@ func initStructFields(typesInfo *types.Package, modelS *ModelStruct) {
 	//fmt.Println()
 }
 
+func scanTags(field *modelField) {
+	if sqlTag, exist := field.FindTag("sql", "ggm"); exist {
+		sqlTag = strings.ToLower(sqlTag)
+		if sqlTag == "pk" || sqlTag == "primary_key" || sqlTag == "primarykey" {
+			field.IsPrimaryKey = true
+		}
+	}
+
+	if sqlTag, exist := field.FindTag("maxsize", "length"); exist {
+		if length, parsing_err := strconv.ParseInt(sqlTag, 10, 64); parsing_err == nil {
+			if textFieldType, ok := field.Type().(*fieldType.Text); ok {
+				textFieldType.MaxLength = int(length)
+			}
+		}
+	}
+}
+
 func scanField(field *types.Var) []modelField {
 	//fmt.Println("		scanField", field.Name())
 	var newModelFields []modelField
@@ -78,12 +93,68 @@ func scanField(field *types.Var) []modelField {
 		newModelField.IsPrimaryKey = true
 	}
 
+	var detectStructTypeFunc = func(typeName string, nmf *modelField) bool {
+		switch typeName {
+		case "database/sql.NullInt64":
+			nmf.ConstType = fieldType.IntType
+			nmf.IsPointer = true
+			return true
+		case "database/sql.NullFloat64":
+			nmf.ConstType = fieldType.FloatType
+			nmf.IsPointer = true
+			return true
+		case "database/sql.NullString":
+			nmf.ConstType = fieldType.TextType
+			nmf.IsPointer = true
+			return true
+		case "database/sql.NullBool":
+			nmf.ConstType = fieldType.BoolType
+			nmf.IsPointer = true
+			return true
+		case "time.Time":
+			nmf.ConstType = fieldType.DateType
+			return true
+		case "github.com/lib/pq.NullTime":
+			nmf.ConstType = fieldType.DateType
+			nmf.IsPointer = true
+			return true
+		case "github.com/hhh0pE/ggm.Decimal":
+			fallthrough
+		case "github.com/hhhh0pE/ggm.Money":
+			nmf.ConstType = fieldType.DecimalType
+			return true
+		case "github.com/lib/pq.StringArray":
+			nmf.ConstType = fieldType.TextType
+			nmf.IsArray = true
+			return true
+		case "github.com/lib/pq.Int64Array":
+			nmf.ConstType = fieldType.IntType
+			nmf.IsArray = true
+			return true
+		case "github.com/lib/pq.Float64Array":
+			nmf.ConstType = fieldType.FloatType
+			nmf.IsArray = true
+			return true
+		case "github.com/lib/pq.BoolArray":
+			nmf.ConstType = fieldType.BoolType
+			nmf.IsArray = true
+			return true
+		default:
+			return false
+		}
+	}
+
+	if detected := detectStructTypeFunc(field.Type().String(), &newModelField); detected {
+		newModelFields = append(newModelFields, newModelField)
+		return newModelFields
+	}
+
 	//var isPointer bool
 
 	underlying := field.Type().Underlying()
 	if typePointer, ok := underlying.(*types.Pointer); ok {
 		newModelField.IsPointer = true
-		newModelField.Type.IsNullable = true
+		//newModelField.Type.IsNullable = true
 		underlying = typePointer.Elem().Underlying()
 	}
 
@@ -91,13 +162,13 @@ func scanField(field *types.Var) []modelField {
 		kind := bt.Kind()
 		switch {
 		case types.Int <= kind && kind <= types.Uint64:
-			nmf.Type.ConstType = fieldType.IntType
+			nmf.ConstType = fieldType.IntType
 		case types.Float32 == kind || kind == types.Float64:
-			nmf.Type.ConstType = fieldType.FloatType
+			nmf.ConstType = fieldType.FloatType
 		case kind == types.String:
-			nmf.Type.ConstType = fieldType.TextType
+			nmf.ConstType = fieldType.TextType
 		case kind == types.Bool:
-			nmf.Type.ConstType = fieldType.BoolType
+			nmf.ConstType = fieldType.BoolType
 		default:
 			return
 		}
@@ -106,6 +177,7 @@ func scanField(field *types.Var) []modelField {
 
 	if typeBasic, ok := underlying.(*types.Basic); ok {
 		detectBasicType(typeBasic, &newModelField)
+		newModelField.IsGoBaseType = true
 		newModelFields = append(newModelFields, newModelField)
 		return newModelFields
 	}
@@ -131,19 +203,21 @@ func scanField(field *types.Var) []modelField {
 		}
 		if basicElem, ok := typeSlice.Elem().(*types.Basic); ok {
 			detectBasicType(basicElem, &newModelField)
-			newModelField.Type.IsArray = true
+			newModelField.IsArray = true
+			newModelField.IsGoBaseType = true
 			newModelFields = append(newModelFields, newModelField)
 			return newModelFields
 
 		}
 	}
+
 	if typeStruct, ok := underlying.(*types.Struct); ok {
 		if field.Anonymous() { // is embedded
 			// if embedded another Model - it's one2one relation
 			if foundModel := pkgS.GetModel(field.Name()); foundModel != nil {
 
 				newModelField.Name = field.Name()
-				newModelField.Type = fieldType.Integer
+				newModelField.ConstType = fieldType.IntType
 				newModelField.IsForeignKey = true
 				newModelField.Relation = new(tableForeignRelation)
 				newModelField.Relation.isOne2One = true
@@ -165,44 +239,14 @@ func scanField(field *types.Var) []modelField {
 			var typeNamed *types.Named
 			//fmt.Println(reflect.TypeOf(fType))
 			if typePointer, ok := fType.(*types.Pointer); ok {
-				newModelField.Type.IsNullable = true
+				newModelField.IsPointer = true
 				typeNamed = typePointer.Elem().(*types.Named)
 			}
 			if tNamed, ok := fType.(*types.Named); ok {
 				typeNamed = tNamed
 			}
 
-			switch typeNamed.String() {
-			case "database/sql.NullInt64":
-				newModelField.Type = fieldType.IntegerNullable
-			case "database/sql.NullFloat64":
-				newModelField.Type = fieldType.FloatNullable
-			case "database/sql.NullString":
-				newModelField.Type = fieldType.TextNullable
-			case "database/sql.NullBool":
-				newModelField.Type = fieldType.BooleanNullable
-			case "time.Time":
-				newModelField.Type = fieldType.Date
-			case "github.com/lib/pq.NullTime":
-				newModelField.Type = fieldType.DateNullable
-			case "github.com/hhh0pE/ggm.Decimal":
-				fallthrough
-			case "github.com/hhhh0pE/ggm.Money":
-				newModelField.Type = fieldType.Decimal
-
-			//case "github.com/lib/pq.StringArray":
-			//	newModelField.Type.ConstType = fieldType.TextType
-			//	newModelField.Type.IsArray = true
-			//case "github.com/lib/pq.Int64Array":
-			//	newModelField.Type.ConstType = fieldType.IntType
-			//	newModelField.Type.IsArray = true
-			//case "github.com/lib/pq.Float64Array":
-			//	newModelField.Type.ConstType = fieldType.FloatType
-			//	newModelField.Type.IsArray = true
-			//case "github.com/lib/pq.BoolArray":
-			//	newModelField.Type.ConstType = fieldType.BoolType
-			//	newModelField.Type.IsArray = true
-			default:
+			if detected := detectStructTypeFunc(typeNamed.String(), &newModelField); !detected {
 				isSqlField := isImplementSqlScannerInterface(typeNamed.Obj())
 				if isSqlField {
 					fmt.Println("isSqlField", typeNamed.Obj().Name())
@@ -218,7 +262,8 @@ func scanField(field *types.Var) []modelField {
 
 				if foundModel := pkgS.GetModel(typeNamed.Obj().Name()); foundModel != nil {
 					newModelField.IsForeignKey = true
-					newModelField.Type.ConstType = fieldType.IntType
+					newModelField.ConstType = fieldType.IntType
+					newModelField.IsGoBaseType = true
 					var tableFK tableForeignRelation
 					//tableFK.field = &newModelField
 					tableFK.modelTo = foundModel
@@ -226,7 +271,6 @@ func scanField(field *types.Var) []modelField {
 
 					newModelField.Relation = &tableFK
 				}
-
 			}
 
 			newModelFields = append(newModelFields, newModelField)

@@ -59,7 +59,7 @@ func (mi modelIndex) CreateIndexSQL() string {
 		if foundField := model.GetFieldByName(modelFieldName); foundField != nil {
 			//fmt.Println(foundField.Name, foundField.Type.Name, foundField.Type.IsNullable)
 			var fieldNameQuoted = foundField.TableName()
-			if mi.isCoalesce && foundField.Type.IsNullable {
+			if mi.isCoalesce && foundField.IsPointer {
 				fieldNameQuoted = coalesce(*foundField)
 				//fieldNameQuoted = `COALESCE("` + fieldNameQuoted + `", `
 				//switch foundField.Type.ConstType {
@@ -96,7 +96,7 @@ func (mi modelIndex) CreateIndexSQL() string {
 
 func coalesce(field modelField) string {
 	fieldNameCoalesce := `COALESCE("` + field.TableName() + `", `
-	switch field.Type.ConstType {
+	switch field.ConstType {
 	case fieldType.IntType:
 		fieldNameCoalesce += `'0'`
 	case fieldType.FloatType:
