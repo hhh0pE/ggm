@@ -266,21 +266,25 @@ func goType(typeName string, ft FieldType) string {
 //	return ""
 //}
 //
-//func GetAllFieldTypes() []FieldType {
-//	return []FieldType{
-//		Boolean,
-//		BooleanNullable,
-//		Date,
-//		DateNullable,
-//		Integer,
-//		IntegerNullable,
-//		Float,
-//		FloatNullable,
-//		Decimal,
-//		DecimalNullable,
-//		Text,
-//		TextNullable,
-//		VarChar,
-//		VarCharNullable,
-//	}
-//}
+func GetAllFieldTypes() []FieldType {
+	return []FieldType{
+		BoolType.BaseType(false, false, false),
+		BoolType.BaseType(true, false, false),
+		BoolType.BaseType(false, true, false),
+		IntType.BaseType(false, false, false),
+		IntType.BaseType(true, false, false),
+		IntType.BaseType(false, true, false),
+		FloatType.BaseType(false, false, false),
+		FloatType.BaseType(true, false, false),
+		FloatType.BaseType(false, true, false),
+		DecimalType.BaseType(false, false, false),
+		DecimalType.BaseType(true, false, false),
+		DecimalType.BaseType(false, true, false),
+		TextType.BaseType(false, false, false),
+		TextType.BaseType(true, false, false),
+		TextType.BaseType(false, true, false),
+		DateType.BaseType(false, false, false),
+		DateType.BaseType(true, false, false),
+		DateType.BaseType(false, true, false),
+	}
+}

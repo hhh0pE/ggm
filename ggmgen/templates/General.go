@@ -78,10 +78,11 @@ func Exec(sql string, args ...interface{}) (sql.Result, error) {
 type modelWhere interface{
     andOr()
     addCond(string)
+	addJoin(string)
 }
 
-type model interface {
-	tableName() string
+type Model interface {
+	TableName() string
 }
 
 func RunMigration() error {
@@ -301,8 +302,8 @@ type pgNotify struct {
 	{{$notify.Model.Name}} notify{{$notify.Model.Name}}
 	{{- end}}
 }
-func pgNotifyOnInsert(newModel model) {
-	switch newModel.tableName() {
+func pgNotifyOnInsert(newModel Model) {
+	switch newModel.TableName() {
 		{{- range $notify := .Notifies -}}
 		{{- if $notify.OnInsert}}
 		case "{{$notify.Model.TableName}}":
@@ -312,11 +313,11 @@ func pgNotifyOnInsert(newModel model) {
 		{{- end -}}
 		{{- end}}
 		default:
-			log.Println("PgNotify.OnInsert for model \""+newModel.tableName()+"\" that ggm not generated for. Run ggmgen!")
+			log.Println("PgNotify.OnInsert for model \""+newModel.TableName()+"\" that ggm not generated for. Run ggmgen!")
 	}
 }
-func pgNotifyOnUpdate(oldModel model, newModel model) {
-	switch newModel.tableName() {
+func pgNotifyOnUpdate(oldModel Model, newModel Model) {
+	switch newModel.TableName() {
 		{{- range $notify := .Notifies -}}
 		{{- if $notify.OnUpdate}}
 		case "{{$notify.Model.TableName}}":
@@ -326,11 +327,11 @@ func pgNotifyOnUpdate(oldModel model, newModel model) {
 		{{- end -}}
 		{{- end}}
 		default:
-			log.Println("PgNotify.OnUpdate for model \""+newModel.tableName()+"\" that ggm not generated for. Run ggmgen!")
+			log.Println("PgNotify.OnUpdate for model \""+newModel.TableName()+"\" that ggm not generated for. Run ggmgen!")
 	}
 }
-func pgNotifyOnDelete(oldModel model) {
-	switch oldModel.tableName() {
+func pgNotifyOnDelete(oldModel Model) {
+	switch oldModel.TableName() {
 		{{- range $notify := .Notifies}}
 		{{- if $notify.OnDelete}}
 		case "{{$notify.Model.TableName}}":
@@ -340,7 +341,7 @@ func pgNotifyOnDelete(oldModel model) {
 		{{- end}}
 		{{- end}}
 		default:
-			log.Println("PgNotify.OnDelete for model \""+oldModel.tableName()+"\" that ggm not generated for. Run ggmgen!")
+			log.Println("PgNotify.OnDelete for model \""+oldModel.TableName()+"\" that ggm not generated for. Run ggmgen!")
 	}
 }
 
@@ -582,4 +583,54 @@ func scannerTypeToBaseType(s interface{}, baseType interface{}) interface{} {
 	// never catch that
 	return nil
 }
+
+func Save(m Model) error {
+	switch m.TableName() {
+	{{range $model := .Models}}
+		case "{{$model.TableName}}":
+		if casted, ok := m.(*{{$model.Name}}); ok {
+			return save{{$model.Name}}(casted)
+		}
+	{{end}}
+	}
+
+	return errors.New("Cannot save model \""+m.TableName()+"\" - run ggmgen first!")
+}
+
+func Insert(m Model) error {
+	switch m.TableName() {
+	{{range $model := .Models}}
+		case "{{$model.TableName}}":
+		if casted, ok := m.(*{{$model.Name}}); ok {
+			return insert{{$model.Name}}(casted)
+		}
+	{{end}}
+	}
+
+	return errors.New("Cannot insert model \""+m.TableName()+"\" - run ggmgen first!")
+}
+
+func Delete(m Model) error {
+	switch m.TableName() {
+	{{range $model := .Models}}
+		case "{{$model.TableName}}":
+		if casted, ok := m.(*{{$model.Name}}); ok {
+			return delete{{$model.Name}}(casted)
+		}
+		if casted, ok := m.({{$model.Name}}); ok {
+			return delete{{$model.Name}}(&casted)
+		}
+	{{end}}
+	}
+
+	return errors.New("Cannot delete model \""+m.TableName()+"\" - run ggmgen first!")
+}
+
+{{range $model := .Models}}
+	{{range $relation := $model.Relations}}
+		type relation{{$model.Name}}{{$relation.ModelTo.Name}} struct {
+
+		}
+	{{end}}
+{{end}}
 `

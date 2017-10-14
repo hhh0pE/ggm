@@ -3,9 +3,11 @@ package templates
 const ModelTemplate = `
 
 // model {{.Name}} ORM part
-func ({{abbr .Name}} {{.Name}}) tableName() string {
+{{if not .IsTableNameSetByUser}}
+func ({{abbr .Name}} {{.Name}}) TableName() string {
 	return "{{.TableName}}"
 }
+{{end}}
 
 func isEmpty{{.Name}}({{abbr .Name}} {{.Name}}) bool {
 	{{- range $field := .Fields}}
@@ -17,8 +19,8 @@ func isEmpty{{.Name}}({{abbr .Name}} {{.Name}}) bool {
 	return true
 }
 
-func ({{abbr .Name}} *{{.Name}}) Save() error {
-	if inserting_err := {{abbr .Name}}.Insert(); inserting_err != nil {
+func save{{.Name}}({{abbr .Name}} *{{.Name}}) error {
+	if inserting_err := insert{{.Name}}({{abbr .Name}}); inserting_err != nil {
 		if pqInsertingErr, ok := inserting_err.(*pq.Error); ok {
 			if pqInsertingErr.Code.Name() != "unique_violation" {
 				return pqInsertingErr
@@ -69,7 +71,7 @@ func ({{abbr .Name}} *{{.Name}}) Save() error {
 	return nil
 }
 
-func ({{abbr .Name}} *{{.Name}}) Insert() error {
+func insert{{.Name}} ({{abbr .Name}} *{{.Name}}) error {
 	{{range $field := .Fields}}{{if $field.IsPrimaryKey}}if {{abbr $.Name}}.{{$field.Name}} != {{$field.Type.DefaultValue}} {
 		return errors.New("Cannot insert {{$.Name}} with {{$field.Name}} != {{$field.Type.DefaultValue}}")
 	}
@@ -102,7 +104,7 @@ func ({{abbr .Name}} *{{.Name}}) Insert() error {
 	return nil
 }
 
-func ({{abbr .Name}} *{{.Name}}) Delete() error {
+func delete{{.Name}}({{abbr .Name}} *{{.Name}}) error {
 	var pkFieldWhere []string
 	{{range $field := .Fields}}{{if $field.IsPrimaryKey}}pkFieldWhere = append(pkFieldWhere, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{abbr $.Name}}.{{$field.Name}}))
 	{{end}}{{end}}
@@ -138,7 +140,7 @@ func get{{.Name}}FieldPointers({{abbr .Name}} *{{.Name}}, fieldNames []string) [
 type {{lower .Name}}Query struct {
 	{{lower .Name}}Select  {{lower .Name}}Select
 	{{lower .Name}}Where   *{{lower .Name}}Where
-	osbbJoin        string
+	joins        []string
 	limit           int
 	{{lower .Name}}OrderBy *{{lower .Name}}OrderBy
 }
@@ -321,7 +323,7 @@ func ({{abbr .Name}} *{{lower .Name}}OrderBy) LIMIT(limit int) *{{lower .Name}}Q
 
 {{range $field := .Fields}}
 func ({{abbr $.Name}} *{{lower $.Name}}OrderBy) {{$field.Name}}() *{{lower $.Name}}OrderBySelectedField {
-    {{abbr $.Name}}.ordersBy = append({{abbr $.Name}}.ordersBy, "\"{{.TableName}}\" ASC")
+    {{abbr $.Name}}.ordersBy = append({{abbr $.Name}}.ordersBy, "\"{{$field.Model.TableName}}\".\"{{.TableName}}\" ASC")
     return &{{lower $.Name}}OrderBySelectedField{ {{abbr $.Name}} }
 }
 {{end}}
@@ -345,9 +347,12 @@ func ({{abbr .Name}} {{lower .Name}}Select) fieldNames() []string {
 	return {{abbr .Name}}.fields
 }
 func ({{abbr .Name}} {{lower .Name}}Select) fieldsSQL() string {
-	{{abbr .Name}}.fields = {{abbr .Name}}.fieldNames()
+	var sqlFields []string
+	for _, f := range {{abbr .Name}}.fieldNames() {
+		sqlFields = append(sqlFields, "\"{{.TableName}}\".\""+f+"\"")
+	}
 
-	return "\"" + strings.Join({{abbr .Name}}.fields, "\", \"") + "\""
+	return strings.Join(sqlFields, ", ")
 }
 func ({{abbr .Name}} {{lower .Name}}Select) SQL() string {
     return {{abbr .Name}}.query.SQL()
@@ -405,6 +410,9 @@ func ({{abbr .Name}} *{{lower .Name}}Where) andOr() {
         }
     }
     {{abbr .Name}}.conds += "("
+}
+func ({{abbr .Name}} *{{lower .Name}}Where) addJoin(join string) {
+	{{abbr .Name}}.query.joins = append({{abbr .Name}}.query.joins, join)
 }
 func ({{abbr .Name}} *{{lower .Name}}Where) AND() *{{lower .Name}}Where {
 	{{abbr .Name}}.nextOperatorOr = false

@@ -16,9 +16,12 @@ import (
 
 	log "log"
 
+	"time"
+
 	"github.com/hhh0pE/ggm/ggmgen/templates"
 	"github.com/nullbio/inflect"
 	"github.com/serenize/snaker"
+	"github.com/hhh0pE/ggm/ggmgen/fieldType"
 )
 
 func main() {
@@ -31,6 +34,9 @@ var pkgS *packageStruct
 var fset *token.FileSet
 
 func analyze() *packageStruct {
+
+	time1 := time.Now()
+
 	fset = token.NewFileSet()
 	dir, _ := os.Getwd()
 
@@ -62,6 +68,7 @@ func analyze() *packageStruct {
 
 	var pStruct packageStruct
 
+	time2 := time.Now()
 	pkgS = &pStruct
 	for _, pkg := range pkgs {
 		var initPkgErr error
@@ -73,26 +80,49 @@ func analyze() *packageStruct {
 		break
 	}
 
-	for _, m := range pkgS.Models {
-		if m.TableName == "" {
-			m.TableName = generateTableName(m.Name)
+	for i, _ := range pkgS.Models {
+		if pkgS.Models[i].TableName == "" {
+			pkgS.Models[i].TableName = generateTableName(pkgS.Models[i].Name)
 		}
-		//fmt.Println(m.Name, m.TableName)
+
 	}
 
 	pStruct.DirPath = dir
 
+	time3 := time.Now()
 	for i, _ := range pStruct.Models {
 		m := pStruct.Models[i]
 		initStructFields(pkgTypesInfo, m)
 	}
 
 	for i := 0; i < len(pStruct.Models); i++ {
+		for fi, _ := range pStruct.Models[i].fields {
+			pStruct.Models[i].fields[fi].Model = pStruct.Models[i]
+		}
 		if !pStruct.Models[i].HasPrimaryKey() {
 			pStruct.Models = append(pStruct.Models[:i], pStruct.Models[i+1:]...)
 			i--
 		}
 	}
+
+	time4 := time.Now()
+	for _, m := range pStruct.Models {
+		directRelations := m.Relations()
+		fmt.Println(m.Name, len(directRelations))
+		for _, dr := range directRelations {
+			if dr.ViaModel != nil {
+				fmt.Println("\t", dr.RelationType, dr.ModelFrom.Name+"<= "+dr.ViaModel.Name+" =>"+dr.ModelTo.Name)
+			} else {
+				fmt.Println("\t", dr.RelationType, dr.ModelFrom.Name+"<=>"+dr.ModelTo.Name)
+			}
+
+		}
+		fmt.Println()
+	}
+	fmt.Println("building relations execution time: ", time.Now().Sub(time4))
+	fmt.Println("initPackageStruct time", time3.Sub(time2))
+	fmt.Println("initStructFields time", time4.Sub(time3))
+	fmt.Println("Total time: ", time.Now().Sub(time1))
 	//
 	//for _, m := range pStruct.Models {
 	//
@@ -185,6 +215,17 @@ func generate(ps packageStruct) {
 	generalTmpl.Execute(ormFile, ps)
 	//tmpl.ExecuteTemplate(ormFile, "general.tmpl", ps)
 	ormFile.WriteString("\n\n")
+
+	fieldTypes := fieldType.GetAllFieldTypes()
+	for _, ft := range fieldTypes {
+		tmpl, tmpl_err := template.New(ft.Name()).Funcs(funcsMap).Parse(ft.WhereTemplate())
+		if tmpl_err != nil {
+			panic(tmpl_err)
+		}
+		if execution_err := tmpl.Execute(ormFile, nil); execution_err != nil {
+			panic(execution_err)
+		}
+	}
 
 	//if fieldTypeFiles, err := ioutil.ReadDir("./templates/fields"); err != nil {
 	//	panic(err)

@@ -123,6 +123,7 @@ func initPackageStructs(pkg *ast.Package) (packageStruct, error) {
 				}
 				if fDecl.Name.Name == "TableName" {
 					var ms ModelStruct
+					ms.IsTableNameSetByUser = true
 
 					for _, st := range fDecl.Body.List {
 						if rs, ok := st.(*ast.ReturnStmt); ok {

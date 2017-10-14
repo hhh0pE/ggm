@@ -188,13 +188,23 @@ func (mf modelField) ExecuteTemplate() string {
 	}
 
 	executing_err := tmpl.Execute(result, struct {
-		ModelName string
-		FieldAbbr string
-		FieldName string
-	}{mf.Model.Name, templateAbbrFunc(mf.Name), mf.Name})
+		ModelName      string
+		ModelTableName string
+		FieldAbbr      string
+		FieldName      string
+	}{mf.Model.Name, mf.Model.TableName, templateAbbrFunc(mf.Name), mf.Name})
 	if executing_err != nil {
 		panic(executing_err)
 	}
 
 	return result.String()
+}
+
+func (mf modelField) IsUnique() bool {
+	for _, i := range mf.Model.indexes {
+		if len(i.fieldNames) == 1 && i.fieldNames[0] == mf.Name {
+			return true
+		}
+	}
+	return false
 }

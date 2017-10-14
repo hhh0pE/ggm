@@ -1,9 +1,9 @@
 package main
 
 type packageStruct struct {
-	Name    string
-	DirPath string
-	Models  []*ModelStruct
+	Name        string
+	DirPath     string
+	Models      []*ModelStruct
 }
 
 func (ps packageStruct) GetModel(name string) *ModelStruct {
@@ -26,7 +26,7 @@ func (ps packageStruct) HasModel(name string) bool {
 
 func (ps *packageStruct) AddModel(m ModelStruct) {
 	for i, _ := range ps.Models {
-		if ps.Models[i].Name == m.Name {
+		if ps.Models[i].Name == m.Name && m.TableName != "" {
 			ps.Models[i].TableName = m.TableName
 			return
 		}
@@ -52,3 +52,14 @@ func (ps packageStruct) Notifies() []pgNotify {
 	}
 	return notifies
 }
+
+//func (ps packageStruct) ModelRelation(model1Name, model2Name string) RelationType {
+//
+//}
+
+//func (ps *packageStruct) buildRelationMap() {
+//
+//	for _, m := range ps.Models {
+//
+//	}
+//}

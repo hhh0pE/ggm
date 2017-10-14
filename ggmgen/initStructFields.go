@@ -23,21 +23,20 @@ func initStructFields(typesInfo *types.Package, modelS *ModelStruct) {
 		return
 	}
 
-	if modelTI.Type() == nil {
-		//analyze()
-		log.Println("modelTI.Type() == nil :(")
-		return
-		//fmt.Println(modelTI == nil)
-		//for i := 0; i < typesInfo.Scope().Len(); i++ {
-		//	fmt.Println(i, typesInfo.Scope().Len())
-		//	fmt.Println(typesInfo.Scope().Child(i))
-		//}
-	}
 	//if modelTI.Type() == nil {
 	//	return
 	//}
 	//fmt.Println("<<", modelTI, reflect.TypeOf(modelTI))
-	//fmt.Println("type()", modelTI.Type())
+	//fmt.Println("type()", modelTI.Type(), reflect.TypeOf(modelTI.Type()))
+	//if named, ok := modelTI.Type().(*types.Named); ok {
+	//	for mi := 0; mi < named.NumMethods(); mi++ {
+	//		method := named.Method(mi)
+	//		if method.Name() == "TableName" {
+	//
+	//			modelS.IsTableNameSetByUser = true
+	//		}
+	//	}
+	//}
 	//fmt.Println("type().underlying()", modelTI.Type().Underlying())
 
 	modelStruct, ok := modelTI.Type().Underlying().(*types.Struct)
@@ -62,6 +61,15 @@ func initStructFields(typesInfo *types.Package, modelS *ModelStruct) {
 			if ff.IsForeignKey && ff.Relation != nil {
 				ff.Model = modelS
 				ff.Relation.field = &ff
+
+				if ff.Relation.isOne2One {
+					var newOne2OneIndex modelIndex
+					newOne2OneIndex.isUnique = true
+					newOne2OneIndex.isCoalesce = true
+					newOne2OneIndex.modelName = ff.Relation.modelTo.Name
+					newOne2OneIndex.fieldNames = []string{ff.Relation.field.Name}
+					modelS.indexes = append(modelS.indexes, newOne2OneIndex)
+				}
 			}
 			modelS.AddField(ff)
 			//fmt.Printf("%s: %#v\n", ff.Name, ff.Type)

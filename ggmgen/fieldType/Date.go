@@ -77,34 +77,59 @@ func (d Date) ImplementScannerInterface() bool {
 
 
 const DateTemplate = `
-type whereFieldDate{{.ModelName}} struct {
+{{if not .}}
+type whereFieldDate struct {
 	name  string
-	where *{{lower .ModelName}}Where
+	where modelWhere
 }
-
-func (wfd whereFieldDate{{.ModelName}}) Is(d time.Time) *{{lower .ModelName}}Where {
+func(wfd whereFieldDate) sqlName() string {
+	return "\""+wfd.name+"\""
+}
+func (wfd whereFieldDate) is(d time.Time) modelWhere {
 	wfd.where.andOr()
 	wfd.where.addCond("\"" + wfd.name + "\" = '" + d.Format("2006-02-01") + "'")
 	return wfd.where
 }
+func (wfd whereFieldDate) isNull() modelWhere {
+	wfd.where.andOr()
+	wfd.where.addCond(wfd.sqlName() + " IS NULL")
+	return wfd.where
+}
+func (wfd whereFieldDate) isNotNull() modelWhere {
+	wfd.where.andOr()
+	wfd.where.addCond(wfd.sqlName() + " IS NOT NULL")
+	return wfd.where
+}
+{{else}}
+type whereFieldDate{{.ModelName}} struct {
+	whereFieldDate
+}
+func(wfd whereFieldDate{{.ModelName}}) sqlName() string {
+	return "\"{{.ModelTableName}}\".\""+wfd.name+"\""
+}
+
+func (wfd whereFieldDate{{.ModelName}}) Is(d time.Time) *{{lower .ModelName}}Where {
+	return wfd.is(d).(*{{lower .ModelName}}Where)
+}
+{{end}}
 `
 
 
 const DateNullableTemplate = `
+{{if .}}
 type whereFieldDateNullable{{.ModelName}} struct {
 	whereFieldDate{{.ModelName}}
 }
-
+func(wfdn whereFieldDateNullable{{.ModelName}}) sqlName() string {
+	return "\"{{.ModelTableName}}\".\""+wfdn.name+"\""
+}
 func (wfd whereFieldDateNullable{{.ModelName}}) IsNull() *{{lower .ModelName}}Where {
-	wfd.where.andOr()
-	wfd.where.addCond("\"" + wfd.name + "\" IS NULL")
-	return wfd.where
+	return wfd.isNull().(*{{lower .ModelName}}Where)
 }
 func (wfd whereFieldDateNullable{{.ModelName}}) IsNotNull() *{{lower .ModelName}}Where {
-	wfd.where.andOr()
-	wfd.where.addCond("\"" + wfd.name + "\" IS NOT NULL")
-	return wfd.where
+	return wfd.isNotNull().(*{{lower .ModelName}}Where)
 }
+{{end}}
 `
 
 
