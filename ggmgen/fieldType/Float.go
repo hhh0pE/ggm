@@ -179,8 +179,7 @@ func (wfi whereFieldFloat) isNotNull() modelWhere {
 }
 {{else}}
 type whereFieldFloat{{.ModelName}} struct {
-	name  string
-	where *{{lower .ModelName}}Where
+	whereFieldFloat
 }
 
 func (wff whereFieldFloat{{.ModelName}}) sqlName() string {
@@ -233,7 +232,7 @@ func (wfi whereFieldFloat{{.ModelName}}) In(nums []float64) *{{lower .ModelName}
 	return wfi.in(nums).(*{{lower .ModelName}}Where)
 }
 func (wfi whereFieldFloat{{.ModelName}}) Any(nums ...float64) *{{lower .ModelName}}Where {
-	return wfi.any(val).(*{{lower .ModelName}}Where)
+	return wfi.any(nums...).(*{{lower .ModelName}}Where)
 }
 {{end}}
 `
@@ -248,7 +247,7 @@ func (wff whereFieldFloatNullable{{.ModelName}}) IsNull() *{{lower .ModelName}}W
 	return wff.isNull().(*{{lower .ModelName}}Where)
 }
 func (wff whereFieldFloatNullable{{.ModelName}}) IsNotNull() *{{lower .ModelName}}Where {
-	return wfi.isNotNull().(*{{lower .ModelName}}Where)
+	return wff.isNotNull().(*{{lower .ModelName}}Where)
 }
 {{end}}
 `
@@ -344,67 +343,67 @@ func(wffa whereFieldFloatArray{{.ModelName}}) sqlName() string {
 }
 
 func(wffa whereFieldFloatArray{{.ModelName}}) Is(val []float64) *{{lower .ModelName}}Where {
-	return wffa.is(val).(*{{lower .ModelName}})
+	return wffa.is(val).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) IsNot(val []float64) *{{lower .ModelName}}Where {
-	return wffa.isNot(val).(*{{lower .ModelName}})
+	return wffa.isNot(val).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LessThan(val []float64) *{{lower .ModelName}}Where {
-	return wffa.lessThan(val).(*{{lower .ModelName}})
+	return wffa.lessThan(val).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LT(val []float64) *{{lower .ModelName}}Where {
 	return wffa.LessThan(val)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LessThanOrEqual(val []float64) *{{lower .ModelName}}Where {
-	return wffa.lessThanOrEqual(val).(*{{lower .ModelName}})
+	return wffa.lessThanOrEqual(val).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LTE(val []float64) *{{lower .ModelName}}Where {
 	return wffa.LessThanOrEqual(val)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) GreaterThan(val []float64) *{{lower .ModelName}}Where {
-	return wffa.greaterThan(val).(*{{lower .ModelName}})
+	return wffa.greaterThan(val).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) GT(val []float64) *{{lower .ModelName}}Where {
 	return wffa.GreaterThan(val)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) GreaterThanOrEqual(val []float64) *{{lower .ModelName}}Where {
-	return wffa.greaterThanOrEqual(val).(*{{lower .ModelName}})
+	return wffa.greaterThanOrEqual(val).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) GTE(val []float64) *{{lower .ModelName}}Where {
 	return wffa.GreaterThanOrEqual(val)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) Contains(val float64) *{{lower .ModelName}}Where {
-	return wffa.contains(val).(*{{lower .ModelName}})
+	return wffa.contains(val).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) ContainedBy(val []float64) *{{lower .ModelName}}Where {
-	return wffa.containedBy(val).(*{{lower .ModelName}})
+	return wffa.containedBy(val).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) Overlap(val []float64) *{{lower .ModelName}}Where {
-	return wffa.overlap(val).(*{{lower .ModelName}})
+	return wffa.overlap(val).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LengthIs(len int) *{{lower .ModelName}}Where {
-	return wffa.lengthIs(len).(*{{lower .ModelName}})
+	return wffa.lengthIs(len).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LengthLessThan(len int) *{{lower .ModelName}}Where {
-	return wffa.lengthLessThan(len).(*{{lower .ModelName}})
+	return wffa.lengthLessThan(len).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LengthLT(len int) *{{lower .ModelName}}Where {
 	return wffa.LengthLessThan(len)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LengthLessThanOrEqual(len int) *{{lower .ModelName}}Where {
-	return wffa.lengthLessThanOrEqual(val).(*{{lower .ModelName}})
+	return wffa.lengthLessThanOrEqual(len).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LengthLTE(len int) *{{lower .ModelName}}Where {
 	return wffa.LengthLessThanOrEqual(len)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LengthGreaterThan(len int) *{{lower .ModelName}}Where {
-	return wffa.lengthGreaterThan(val).(*{{lower .ModelName}})
+	return wffa.lengthGreaterThan(len).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LengthGT(len int) *{{lower .ModelName}}Where {
 	return wffa.LengthGreaterThan(len)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LengthGreaterThanOrEqual(len int) *{{lower .ModelName}}Where {
-	return wffa.lengthGreaterThanOrEqual(val).(*{{lower .ModelName}})
+	return wffa.lengthGreaterThanOrEqual(len).(*{{lower .ModelName}}Where)
 }
 func(wffa whereFieldFloatArray{{.ModelName}}) LengthGTE(len int) *{{lower .ModelName}}Where {
 	return wffa.LengthGreaterThanOrEqual(len)

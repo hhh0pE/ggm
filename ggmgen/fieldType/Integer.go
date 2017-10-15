@@ -165,12 +165,12 @@ func (wfi whereFieldInteger) any(nums ...int) modelWhere {
 	wfi.where.addCond(cond)
 	return wfi.where
 }
-func (wfi whereFieldInteger) IsNull() modelWhere {
+func (wfi whereFieldInteger) isNull() modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName() + " IS NULL")
 	return wfi.where
 }
-func (wfi whereFieldInteger) IsNotNull() modelWhere {
+func (wfi whereFieldInteger) isNotNull() modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName() + " IS NOT NULL")
 	return wfi.where
@@ -333,7 +333,7 @@ func(wfia whereFieldIntegerArray) lengthGreaterThanOrEqual(len int) modelWhere {
 type whereFieldIntegerArray{{.ModelName}} struct {
 	whereFieldIntegerArray
 }
-func(wfia whereFieldIntegerArray{{.ModelName}}) sqlName() stirng {
+func(wfia whereFieldIntegerArray{{.ModelName}}) sqlName() string {
 	return "\"{{.ModelTableName}}\".\""+wfia.name+"\""
 }
 func(wfia whereFieldIntegerArray{{.ModelName}}) Is(val []int64) *{{lower .ModelName}}Where {
@@ -385,7 +385,7 @@ func(wfia whereFieldIntegerArray{{.ModelName}}) LengthLT(len int) *{{lower .Mode
 	return wfia.LengthLessThan(len)
 }
 func(wfia whereFieldIntegerArray{{.ModelName}}) LengthLessThanOrEqual(len int) *{{lower .ModelName}}Where {
-	return wfia.lengthLEssThanOrEqual(len).(*{{lower .ModelName}}Where)
+	return wfia.lengthLessThanOrEqual(len).(*{{lower .ModelName}}Where)
 }
 func(wfia whereFieldIntegerArray{{.ModelName}}) LengthLTE(len int) *{{lower .ModelName}}Where {
 	return wfia.LengthLessThanOrEqual(len)

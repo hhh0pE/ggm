@@ -1,6 +1,10 @@
 package main
 
-import "github.com/imdario/mergo"
+import (
+	"fmt"
+
+	"github.com/imdario/mergo"
+)
 
 type ModelStruct struct {
 	Name                 string
@@ -49,7 +53,7 @@ func (ms ModelStruct) IsMany2ManyTable() bool {
 		return false
 	}
 	for i := 0; i < len(fks); i++ {
-		if i+1 < len(fks) && fks[i].field.Name != fks[i+1].field.Name {
+		if i+1 < len(fks) && fks[i].Field.Name != fks[i+1].Field.Name {
 			return true
 		}
 	}
@@ -57,8 +61,12 @@ func (ms ModelStruct) IsMany2ManyTable() bool {
 }
 
 func (ms ModelStruct) IsMany2ManyTableWithoutData() bool {
-	for _, f := range ms.fields {
+	for fi, f := range ms.fields {
 		if !f.IsForeignKey && !f.IsPrimaryKey {
+			return false
+		}
+		if fi > 0 && (ms.fields[fi-1].Relation != nil && ms.fields[fi].Relation != nil &&
+			ms.fields[fi-1].Relation.modelTo.Name == ms.fields[fi].Relation.modelTo.Name) {
 			return false
 		}
 	}
@@ -68,19 +76,26 @@ func (ms ModelStruct) IsMany2ManyTableWithoutData() bool {
 func (ms *ModelStruct) DirectRelations() []modelRelation {
 	if ms.directRelationsCache == nil {
 		if ms.IsMany2ManyTableWithoutData() {
+			fmt.Println("Many2ManyWithoutData", ms.Name)
 			return nil
 		}
 
+		var relationExistMap = make(map[string]bool)
+
 		var modelRelations []modelRelation
-		for _, f := range ms.fields {
+		for fi, f := range ms.fields {
 			if f.Relation != nil {
-				newRelation := modelRelation{ModelFrom: ms, ModelTo: f.Relation.modelTo}
+				newRelation := modelRelation{ModelFrom: ms, ModelTo: f.Relation.modelTo, Field:&ms.fields[fi]}
 				if f.IsUnique() {
 					newRelation.RelationType = ONE2ONE
 				} else {
 					newRelation.RelationType = ONE2MANY
 				}
-				modelRelations = append(modelRelations, newRelation)
+
+				if _, exist := relationExistMap[newRelation.String()]; !exist {
+					relationExistMap[newRelation.String()] = true
+					modelRelations = append(modelRelations, newRelation)
+				}
 			}
 		}
 
@@ -89,9 +104,10 @@ func (ms *ModelStruct) DirectRelations() []modelRelation {
 				continue
 			}
 			if !m.IsMany2ManyTableWithoutData() {
-				for _, f := range m.fields { // adding reverse relations
+				for fi, f := range m.fields { // adding reverse relations
 					if f.Relation != nil && f.Relation.modelTo.Name == ms.Name {
 						var newReverseRelation modelRelation
+						newReverseRelation.Field = &m.fields[fi]
 						newReverseRelation.ModelFrom = ms
 						newReverseRelation.ModelTo = m
 						if f.IsUnique() {
@@ -120,6 +136,7 @@ func (ms *ModelStruct) DirectRelations() []modelRelation {
 							continue
 						}
 						var newRelation modelRelation
+						newRelation.Field = fk.Field
 						newRelation.ModelFrom = ms
 						newRelation.ViaModel = m
 						newRelation.ModelTo = fk.modelTo

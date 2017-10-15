@@ -1,10 +1,15 @@
 package main
 
 type modelRelation struct {
+	Field    *modelField
 	ModelFrom    *ModelStruct
 	ModelTo      *ModelStruct
 	RelationType RelationType
 	ViaModel     *ModelStruct
+}
+
+func (mr modelRelation) String() string {
+	return mr.RelationType.String()+":"+mr.ModelFrom.Name+"->"+mr.ModelTo.Name
 }
 
 type RelationType int8

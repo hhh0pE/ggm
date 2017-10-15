@@ -347,7 +347,7 @@ func(wfba whereFieldDecimalArray{{.ModelName}}) GreaterThanOrEqual(val []ggm.Dec
 func(wfba whereFieldDecimalArray{{.ModelName}}) GTE(val []ggm.Decimal) *{{lower .ModelName}}Where {
 	return wfba.GreaterThanOrEqual(val)
 }
-func(wfba whereFieldDecimalArray{{.ModelName}}) Contains(val decimal) *{{lower .ModelName}}Where {
+func(wfba whereFieldDecimalArray{{.ModelName}}) Contains(val ggm.Decimal) *{{lower .ModelName}}Where {
 	return wfba.contains(val).(*{{lower .ModelName}}Where)
 }
 func(wfba whereFieldDecimalArray{{.ModelName}}) ContainedBy(val []ggm.Decimal) *{{lower .ModelName}}Where {

@@ -384,12 +384,37 @@ func ({{abbr .Name}} *{{lower .Name}}Select) LIMIT(limit int) *{{lower .Name}}Qu
     return {{abbr .Name}}.query.LIMIT(limit)
 }
 
-{{range $field := .UniqueTypeFields}}
-{{$field.ExecuteTemplate}}
+{{ $model := . }}
+{{range $fieldType := GetAllFieldTypes}}
+	{{ExecuteFieldTypeTemplate $fieldType $model}}
 {{end}}
 
+{{template "modelWhere" .}}
+
+{{template "modelWhereRelation" .}}
+
+
+{{define "modelWhereRelation"}}
+{{range $modelRelation := .Relations}}
+type whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}} struct {
+	{{range $field := $modelRelation.ModelTo.Fields}}{{$field.Name}}     whereField{{title $field.Type.Name}}{{$modelRelation.ModelFrom.Name}}
+	{{end -}}
+	{{range $relation := $modelRelation.ModelTo.DirectRelations}}
+		{{- if or (eq $relation.RelationType.String "ONE2ONE") (eq $relation.RelationType.String "ONE2MANY") -}}
+			{{- if not (eq $modelRelation.ModelFrom.Name $relation.ModelTo.Name) -}}
+{{$relation.Field.Name}}	whereRelation{{$modelRelation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}
+			{{end}}
+		{{- end}}
+	{{- end}}
+}
+{{end}}
+
+{{end}}
+{{define "modelWhere"}}
 type {{lower .Name}}Where struct {
 	{{range $field := .Fields}}{{$field.Name}}     whereField{{title $field.Type.Name}}{{$.Name}}
+	{{end}}
+	{{range $relation := .ForeignKeys}}{{$relation.Field.Name}} whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}
 	{{end}}
 	query          *{{lower .Name}}Query
 	conds          string
@@ -445,4 +470,5 @@ func ({{abbr .Name}} *{{lower .Name}}Where) ORDERBY() *{{lower .Name}}OrderBy {
 func ({{abbr .Name}} *{{lower .Name}}Where) LIMIT(limit int) *{{lower .Name}}Query {
     return {{abbr .Name}}.query.LIMIT(limit)
 }
+{{end}}
 `

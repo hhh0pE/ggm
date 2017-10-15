@@ -174,7 +174,7 @@ type whereFieldBooleanNullable{{.ModelName}} struct {
 	whereFieldBoolean{{.ModelName}}
 }
 func(wfbn whereFieldBooleanNullable{{.ModelName}}) sqlName() string {
-	return "\"{{.ModelTableName}}\".\""+wfba.name+"\""
+	return "\"{{.ModelTableName}}\".\""+wfbn.name+"\""
 }
 func (wfbn whereFieldBooleanNullable{{.ModelName}}) IsNull() *{{lower .ModelName}}Where {
 	return wfbn.isNull().(*{{lower .ModelName}}Where)
@@ -317,13 +317,13 @@ func(wfba whereFieldBooleanArray{{.ModelName}}) LengthLessThan(len int) *{{lower
 	return wfba.lengthLessThan(len).(*{{lower .ModelName}}Where)
 }
 func(wfba whereFieldBooleanArray{{.ModelName}}) LengthLT(len int) *{{lower .ModelName}}Where {
-	return wfba.lengthLessThan(len)
+	return wfba.LengthLessThan(len)
 }
 func(wfba whereFieldBooleanArray{{.ModelName}}) LengthLessThanOrEqual(len int) *{{lower .ModelName}}Where {
 	return wfba.lengthLessThanOrEqual(len).(*{{lower .ModelName}}Where)
 }
 func(wfba whereFieldBooleanArray{{.ModelName}}) LengthLTE(len int) *{{lower .ModelName}}Where {
-	return wfba.lengthLessThanOrEqual(len)
+	return wfba.LengthLessThanOrEqual(len)
 }
 func(wfba whereFieldBooleanArray{{.ModelName}}) LengthGreaterThan(len int) *{{lower .ModelName}}Where {
 	return wfba.lengthGreaterThan(len).(*{{lower .ModelName}}Where)

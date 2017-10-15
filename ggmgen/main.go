@@ -9,8 +9,6 @@ import (
 	"os"
 	"strings"
 	"text/template"
-	"unicode"
-	"unicode/utf8"
 
 	"go/importer"
 
@@ -18,10 +16,8 @@ import (
 
 	"time"
 
-	"github.com/hhh0pE/ggm/ggmgen/templates"
-	"github.com/nullbio/inflect"
-	"github.com/serenize/snaker"
 	"github.com/hhh0pE/ggm/ggmgen/fieldType"
+	"github.com/hhh0pE/ggm/ggmgen/templates"
 )
 
 func main() {
@@ -108,6 +104,9 @@ func analyze() *packageStruct {
 	time4 := time.Now()
 	for _, m := range pStruct.Models {
 		directRelations := m.Relations()
+		//if m.Name != "CurrencyPair" {
+		//	continue
+		//}
 		fmt.Println(m.Name, len(directRelations))
 		for _, dr := range directRelations {
 			if dr.ViaModel != nil {
@@ -135,46 +134,6 @@ func analyze() *packageStruct {
 	//}
 
 	return &pStruct
-}
-
-func templateAbbrFunc(name string) string {
-	var abbr string
-	for _, symb := range name {
-		if unicode.IsUpper(symb) {
-			abbr += strings.ToLower(string(symb))
-		}
-	}
-	return abbr
-}
-
-func generateTableName(modelName string) string {
-	snakeCase := snaker.CamelToSnake(modelName)
-	return inflect.Pluralize(snakeCase)
-}
-
-func templateLowerFunc(name string) string {
-	firstSymb, firstSymbSize := utf8.DecodeRuneInString(name)
-	return strings.ToLower(string(firstSymb)) + name[firstSymbSize:]
-}
-
-var funcsMap = template.FuncMap{
-	"lower": templateLowerFunc,
-	"title": func(str string) string {
-		return strings.Title(str)
-	},
-	"abbr": templateAbbrFunc,
-	"IsLastElement": func(index, elementCounts int) bool {
-		if index == elementCounts-1 {
-			return true
-		}
-		return false
-	},
-	"IsNotLastElement": func(index, elementCounts int) bool {
-		if index == elementCounts-1 {
-			return false
-		}
-		return true
-	},
 }
 
 func generate(ps packageStruct) {

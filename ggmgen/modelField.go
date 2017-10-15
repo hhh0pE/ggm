@@ -14,7 +14,7 @@ import (
 )
 
 type tableForeignRelation struct {
-	field     *modelField
+	Field     *modelField
 	modelTo   *ModelStruct
 	isOne2One bool
 	//TableToName    string
@@ -27,11 +27,11 @@ func (tfr tableForeignRelation) ModelTo() *ModelStruct {
 	return tfr.modelTo
 }
 func (tfr tableForeignRelation) ModelFrom() *ModelStruct {
-	return tfr.field.Model
+	return tfr.Field.Model
 }
 
 func (tfr tableForeignRelation) ConstraintName() string {
-	fieldFrom := tfr.field
+	fieldFrom := tfr.Field
 	fieldTo := tfr.modelTo.PrimaryKey()
 	//if fieldTo == nil {
 	return fmt.Sprintf("%s_%s__%s_%s__fk",
@@ -49,7 +49,7 @@ func (tfr tableForeignRelation) SqlCreateTable() string {
 
 	return fmt.Sprintf("CONSTRAINT \"%s\" FOREIGN KEY (\"%s\") REFERENCES \"%s\" (\"%s\")",
 		tfr.ConstraintName(),
-		tfr.field.TableName(),
+		tfr.Field.TableName(),
 		tfr.modelTo.TableName,
 		tfr.modelTo.PrimaryKey().TableName(),
 	)

@@ -60,14 +60,14 @@ func initStructFields(typesInfo *types.Package, modelS *ModelStruct) {
 		for _, ff := range foundFields {
 			if ff.IsForeignKey && ff.Relation != nil {
 				ff.Model = modelS
-				ff.Relation.field = &ff
+				ff.Relation.Field = &ff
 
 				if ff.Relation.isOne2One {
 					var newOne2OneIndex modelIndex
 					newOne2OneIndex.isUnique = true
 					newOne2OneIndex.isCoalesce = true
 					newOne2OneIndex.modelName = ff.Relation.modelTo.Name
-					newOne2OneIndex.fieldNames = []string{ff.Relation.field.Name}
+					newOne2OneIndex.fieldNames = []string{ff.Relation.Field.Name}
 					modelS.indexes = append(modelS.indexes, newOne2OneIndex)
 				}
 			}
@@ -232,7 +232,7 @@ func scanField(field *types.Var) []modelField {
 				newModelField.IsForeignKey = true
 				newModelField.Relation = new(tableForeignRelation)
 				newModelField.Relation.isOne2One = true
-				newModelField.Relation.field = &newModelField
+				newModelField.Relation.Field = &newModelField
 				newModelField.Relation.modelTo = foundModel
 
 				newModelFields = append(newModelFields, newModelField)

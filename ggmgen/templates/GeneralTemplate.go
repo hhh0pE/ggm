@@ -625,12 +625,4 @@ func Delete(m Model) error {
 
 	return errors.New("Cannot delete model \""+m.TableName()+"\" - run ggmgen first!")
 }
-
-{{range $model := .Models}}
-	{{range $relation := $model.Relations}}
-		type relation{{$model.Name}}{{$relation.ModelTo.Name}} struct {
-
-		}
-	{{end}}
-{{end}}
 `
