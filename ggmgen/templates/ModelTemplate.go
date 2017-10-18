@@ -227,16 +227,36 @@ func ({{abbr .Name}} {{lower .Name}}Query) SQL() string {
     var ordersByStr string
     var whereStr string
     var limitStr string
+	var joinStr string
     if {{abbr .Name}}.{{lower .Name}}OrderBy != nil {
         ordersByStr = {{abbr .Name}}.{{lower .Name}}OrderBy.orderBySQL()
     }
     if {{abbr .Name}}.{{lower .Name}}Where != nil {
         whereStr = " WHERE " + {{abbr .Name}}.{{lower .Name}}Where.conditionSQL()
     }
+
+	if {{abbr .Name}}.joins != nil && len({{abbr .Name}}.joins) > 0 {
+		joinUniqueMap := make(map[string]bool)
+		for _, join := range {{abbr .Name}}.joins {
+			if _, alreadyExist := joinUniqueMap[join]; !alreadyExist {
+				joinUniqueMap[join] = true
+				if joinParts := strings.Split(join, "=>"); len(joinParts) == 2 {
+					if joinText, joinExist := joinMap[joinParts[0]][joinParts[1]]; joinExist {
+						joinStr += joinText
+					} else {
+						log.Println("doesn't exist relation in joinMap :( "+join)
+					}
+				} else {
+					log.Println("not exist join pair: "+join)
+				}
+			}
+		}
+		joinStr += "\n"
+	}
     if {{abbr .Name}}.limit > 0 {
         limitStr = fmt.Sprintf(" LIMIT %d", {{abbr .Name}}.limit)
     }
-    return "SELECT " + {{abbr .Name}}.{{lower .Name}}Select.fieldsSQL() + " FROM \"{{.TableName}}\"" + whereStr + ordersByStr + limitStr
+    return "SELECT " + {{abbr .Name}}.{{lower .Name}}Select.fieldsSQL() + " FROM \"{{.TableName}}\"" + joinStr + whereStr + ordersByStr + limitStr
 }
 
 func ({{abbr .Name}} *{{lower .Name}}Query) LIMIT(limit int) *{{lower .Name}}Query {
@@ -256,9 +276,53 @@ func ({{abbr .Name}} *{{lower .Name}}Query) WHERE() *{{lower .Name}}Where {
         {{abbr $.Name}}.{{lower $.Name}}Where.{{$field.Name}}.name = "{{$field.TableName}}"
         {{end}}
         {{abbr .Name}}.{{lower .Name}}Where.query = {{abbr .Name}}
+
+	{{$prefix := print (abbr .Name) "." (lower .Name) "Where"}}
+	{{template "relationWhereInitialize" dict "Model" . "Prefix" $prefix "WhereName" $prefix "Joins" ""}}
     }
+
 	return {{abbr .Name}}.{{lower .Name}}Where
 }
+
+{{define "relationWhereInitialize"}}
+	
+	{{- range $fk := .Model.ForeignKeys}}
+	{{$.Prefix}}.{{$fk.Field.Name}}.originalWhere = {{$.WhereName}}
+	{{if $.Joins}}
+		{{$joins := print $.Joins ", " "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
+		{{$.Prefix}}.{{$fk.Field.Name}}.joins = []string{ {{$joins}} }
+	{{else}}
+		{{$joins := print "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
+		{{$.Prefix}}.{{$fk.Field.Name}}.joins = []string{ {{$joins}} }
+	{{end}}
+
+	
+	
+		{{- range $field := $fk.ModelTo.Fields}}
+	{{$.Prefix}}.{{$fk.Field.Name}}.{{$field.Name}}.name = "\"{{$field.Model.TableName}}\".\"{{$field.TableName}}\""
+	{{$.Prefix}}.{{$fk.Field.Name}}.{{$field.Name}}.where = {{$.Prefix}}.{{$fk.Field.Name}}
+
+		{{- $newPrefix := print $.Prefix "." $fk.Field.Name -}}
+
+		{{if $.Joins}}
+			{{$joins := print $.Joins ", " "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
+			{{template "relationWhereInitialize" dict "Model" $fk.ModelTo "Prefix" $newPrefix "WhereName" $.WhereName "Joins" $joins}}
+		{{else}}
+			{{$joins := print "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
+			{{template "relationWhereInitialize" dict "Model" $fk.ModelTo "Prefix" $newPrefix "WhereName" $.WhereName "Joins" $joins}}
+		{{end}}
+
+		{{- end}}
+	
+	
+	{{- end -}}
+{{end}}
+
+{{define "stringSliceToText"}}
+	{{- range $elem := . -}}
+		"{{.}}",
+	{{- end -}}
+{{end}}
 
 func ({{abbr .Name}} *{{lower .Name}}Query) ORDERBY() *{{lower .Name}}OrderBy {
     if {{abbr .Name}}.{{lower .Name}}OrderBy == nil {
@@ -396,17 +460,44 @@ func ({{abbr .Name}} *{{lower .Name}}Select) LIMIT(limit int) *{{lower .Name}}Qu
 
 {{define "modelWhereRelation"}}
 {{range $modelRelation := .Relations}}
+{{if not (eq $modelRelation.ModelTo.Name $.Name)}}
 type whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}} struct {
 	{{range $field := $modelRelation.ModelTo.Fields}}{{$field.Name}}     whereField{{title $field.Type.Name}}{{$modelRelation.ModelFrom.Name}}
 	{{end -}}
-	{{range $relation := $modelRelation.ModelTo.DirectRelations}}
-		{{- if or (eq $relation.RelationType.String "ONE2ONE") (eq $relation.RelationType.String "ONE2MANY") -}}
-			{{- if not (eq $modelRelation.ModelFrom.Name $relation.ModelTo.Name) -}}
-{{$relation.Field.Name}}	whereRelation{{$modelRelation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}
-			{{end}}
-		{{- end}}
-	{{- end}}
+	{{range $fk := $modelRelation.ModelTo.ForeignKeys}}
+		{{if not (eq $modelRelation.ModelFrom.Name $fk.ModelTo.Name)}}
+		{{$fk.Field.Name}}	whereRelation{{$modelRelation.ModelFrom.Name}}_{{$fk.ModelTo.Name}}
+		{{end}}
+	{{end}}
+
+	joins []string
+	originalWhere modelWhere
 }
+
+func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) ModelWhere() modelWhere {
+	return wr.originalWhere
+}
+
+func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) addCond(cond string) {
+	wr.originalWhere.addJoin(wr.joins...)
+	wr.originalWhere.addCond(cond)
+}
+func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) addJoin(join ...string) {
+	wr.originalWhere.addJoin(join...)
+}
+func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) andOr() {
+	wr.originalWhere.andOr()
+}
+
+{{range $relation := $modelRelation.ModelTo.DirectRelations}}
+	{{if not (or (or (eq $relation.RelationType.String "ONE2ONE") (eq $relation.RelationType.String "ONE2MANY")) (eq $relation.ModelTo.Name $modelRelation.ModelFrom.Name) )}}
+func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) {{$relation.ModelTo.Name}}() whereRelation{{$modelRelation.ModelFrom.Name}}_{{$relation.ModelTo.Name}} {
+	return whereRelation{{$modelRelation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}{}
+}
+	{{end}}
+{{end}}
+
+{{end}}
 {{end}}
 
 {{end}}
@@ -420,9 +511,20 @@ type {{lower .Name}}Where struct {
 	conds          string
 	nextOperatorOr bool
 }
+{{range $relation := .DirectRelations}}
+	{{if not (or (eq $relation.RelationType.String "ONE2ONE") (eq $relation.RelationType.String "ONE2MANY"))}}
+func({{abbr $.Name}} {{lower $.Name}}Where) {{$relation.ModelTo.Name}}() whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}} {
+	return whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}{}
+}
+	{{end}}
+{{end}}
 
 func ({{abbr .Name}} {{lower .Name}}Where) conditionSQL() string {
 	return {{abbr .Name}}.conds + ")"
+}
+
+func({{abbr .Name}} *{{lower .Name}}Where) ModelWhere() modelWhere {
+	return {{abbr .Name}}
 }
 
 func ({{abbr .Name}} *{{lower .Name}}Where) andOr() {
@@ -436,9 +538,6 @@ func ({{abbr .Name}} *{{lower .Name}}Where) andOr() {
     }
     {{abbr .Name}}.conds += "("
 }
-func ({{abbr .Name}} *{{lower .Name}}Where) addJoin(join string) {
-	{{abbr .Name}}.query.joins = append({{abbr .Name}}.query.joins, join)
-}
 func ({{abbr .Name}} *{{lower .Name}}Where) AND() *{{lower .Name}}Where {
 	{{abbr .Name}}.nextOperatorOr = false
     return {{abbr .Name}}
@@ -449,7 +548,16 @@ func ({{abbr .Name}} *{{lower .Name}}Where) OR() *{{lower .Name}}Where {
 }
 
 func ({{abbr .Name}} *{{lower .Name}}Where) addCond(cond string) {
+	/*if tableNameEnd := strings.Index(cond, "\"."); tableNameEnd != -1 { // auto add join
+		tableName := cond[len("\""):tableNameEnd]
+		if tableName != "{{.TableName}}" {
+			{{abbr .Name}}.addJoin(tableName)
+		}
+	}*/
     {{abbr .Name}}.conds += cond
+}
+func ({{abbr .Name}} *{{lower .Name}}Where) addJoin(joins ...string) {
+	{{abbr .Name}}.query.joins = append({{abbr .Name}}.query.joins, joins...)
 }
 func ({{abbr .Name}} *{{lower .Name}}Where) ALL() []{{.Name}} {
     return {{abbr .Name}}.query.ALL()

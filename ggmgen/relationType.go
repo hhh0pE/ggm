@@ -1,7 +1,7 @@
 package main
 
 type modelRelation struct {
-	Field    *modelField
+	Field        *modelField
 	ModelFrom    *ModelStruct
 	ModelTo      *ModelStruct
 	RelationType RelationType
@@ -9,7 +9,41 @@ type modelRelation struct {
 }
 
 func (mr modelRelation) String() string {
-	return mr.RelationType.String()+":"+mr.ModelFrom.Name+"->"+mr.ModelTo.Name
+	return mr.RelationType.String() + ":" + mr.ModelFrom.Name + "->" + mr.ModelTo.Name
+}
+
+type ForeignRelationSlice []string
+
+func (frs ForeignRelationSlice) String() string {
+	var result string
+	for i, text := range frs {
+		if i != 0 {
+			result += ", "
+		}
+		result += `"` + text + `"`
+	}
+	return result
+}
+
+func (frs ForeignRelationSlice) SqlString() string {
+	var result string
+	for _, text := range frs {
+		result += "\n\t" + text
+	}
+	return result
+}
+
+func (mr modelRelation) SqlJoin() ForeignRelationSlice {
+	if mr.ViaModel != nil {
+		return []string{
+			`INNER JOIN "` + mr.ViaModel.TableName + `" ON "` + mr.ModelFrom.TableName + `"."` + mr.Field.TableName() + `" = "` + mr.ViaModel.TableName + `"."` + mr.ViaModel.PrimaryKey().TableName() + `"`,
+			`INNER JOIN "` + mr.ModelTo.TableName + `" ON "` + mr.ViaModel.TableName + `"."` + mr.ViaModel.PrimaryKey().TableName() + `" = "` + mr.ModelTo.TableName + `"."` + mr.ModelTo.PrimaryKey().TableName() + `"`,
+		}
+	} else {
+		return []string{
+			`INNER JOIN "` + mr.ModelTo.TableName + `" ON "` + mr.ModelFrom.TableName + `"."` + mr.Field.TableName() + `" = "` + mr.ModelTo.TableName + `"."` + mr.ModelTo.PrimaryKey().TableName() + `"`,
+		}
+	}
 }
 
 type RelationType int8

@@ -103,12 +103,13 @@ func analyze() *packageStruct {
 
 	time4 := time.Now()
 	for _, m := range pStruct.Models {
-		directRelations := m.Relations()
+		relations := m.Relations()
 		//if m.Name != "CurrencyPair" {
 		//	continue
 		//}
-		fmt.Println(m.Name, len(directRelations))
-		for _, dr := range directRelations {
+
+		fmt.Println(m.Name, len(relations))
+		for _, dr := range relations {
 			if dr.ViaModel != nil {
 				fmt.Println("\t", dr.RelationType, dr.ModelFrom.Name+"<= "+dr.ViaModel.Name+" =>"+dr.ModelTo.Name)
 			} else {

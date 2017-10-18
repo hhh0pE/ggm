@@ -45,6 +45,13 @@ func (tfr tableForeignRelation) ConstraintName() string {
 	//}
 }
 
+func (tfr tableForeignRelation) SqlJoin() ForeignRelationSlice {
+	return []string{
+		`INNER JOIN "` + tfr.ModelTo().TableName + `" ON "` + tfr.ModelFrom().TableName + `"."` + tfr.Field.TableName() + `" = "` + tfr.ModelTo().TableName + `"."` + tfr.ModelTo().PrimaryKey().TableName() + `"`,
+	}
+
+}
+
 func (tfr tableForeignRelation) SqlCreateTable() string {
 
 	return fmt.Sprintf("CONSTRAINT \"%s\" FOREIGN KEY (\"%s\") REFERENCES \"%s\" (\"%s\")",

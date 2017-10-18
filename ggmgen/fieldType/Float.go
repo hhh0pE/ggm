@@ -85,59 +85,62 @@ type whereFieldFloat struct {
 	where modelWhere
 }
 func (wff whereFieldFloat) sqlName() string {
+	if strings.HasPrefix(wff.name, "\"") { // already has table name
+		return wff.name
+	}
 	return "\""+wff.name+"\""
 }
 
 func (wfi whereFieldFloat) is(val float64) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(fmt.Sprintf(wfi.sqlName()+" = '%f'", val))
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) eq(val float64) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(fmt.Sprintf(wfi.sqlName()+" = '%f'", val))
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) equal(val float64) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(fmt.Sprintf(wfi.sqlName()+" = '%f'", val))
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) isNot(val float64) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(fmt.Sprintf(wfi.sqlName()+" <> '%f'", val))
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) greaterThan(val float64) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(fmt.Sprintf(wfi.sqlName()+" > '%f'", val))
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) greaterThanOrEqual(val float64) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(fmt.Sprintf(wfi.sqlName()+" >= '%f'", val))
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) lessThan(val float64) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(fmt.Sprintf(wfi.sqlName()+" < '%f'", val))
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) lessThanOrEqual(val float64) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(fmt.Sprintf(wfi.sqlName()+" <= '%f'", val))
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 
 func (wfi whereFieldFloat) between(left, right float64) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(fmt.Sprintf(wfi.sqlName()+" BETWEEN '%f' AND '%f'", left, right))
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) notBetween(left, right float64) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(fmt.Sprintf(wfi.sqlName()+" NOT BETWEEN '%f' AND '%f'", left, right))
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) in(nums []float64) modelWhere {
 	wfi.where.andOr()
@@ -151,7 +154,7 @@ func (wfi whereFieldFloat) in(nums []float64) modelWhere {
 	}
 	cond += ")"
 	wfi.where.addCond(cond)
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) any(nums ...float64) modelWhere {
 	wfi.where.andOr()
@@ -165,25 +168,21 @@ func (wfi whereFieldFloat) any(nums ...float64) modelWhere {
 	}
 	cond += ")"
 	wfi.where.addCond(cond)
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) isNull() modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" IS NULL")
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 func (wfi whereFieldFloat) isNotNull() modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" IS NOT NULL")
-	return wfi.where
+	return wfi.where.ModelWhere()
 }
 {{else}}
 type whereFieldFloat{{.ModelName}} struct {
 	whereFieldFloat
-}
-
-func (wff whereFieldFloat{{.ModelName}}) sqlName() string {
-	return "\"{{.ModelTableName}}\".\""+wff.name+"\""
 }
 func (wfi whereFieldFloat{{.ModelName}}) Is(val float64) *{{lower .ModelName}}Where {
 	return wfi.is(val).(*{{lower .ModelName}}Where)
@@ -260,86 +259,85 @@ type whereFieldFloatArray struct {
 }
 
 func(wfba whereFieldFloatArray) sqlName() string {
+	if strings.HasPrefix(wfba.name, "\"") { // already has table name
+		return wfba.name
+	}
 	return "\""+wfba.name+"\""
 }
 
 func(wfba whereFieldFloatArray) is(val []float64) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" = '"+float64ArrayToSqlValue(val)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) isNot(val []float64) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" <> '"+float64ArrayToSqlValue(val)+"'")
-return wfba.where
+return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) lessThan(val []float64) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" < '"+float64ArrayToSqlValue(val)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) lessThanOrEqual(val []float64) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" <= '"+float64ArrayToSqlValue(val)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) greaterThan(val []float64) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" > '"+float64ArrayToSqlValue(val)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) greaterThanOrEqual(val []float64) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" > '"+float64ArrayToSqlValue(val)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) contains(val float64) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" @> '"+float64ArrayToSqlValue([]float64{val})+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) containedBy(val []float64) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" <@ '"+float64ArrayToSqlValue(val)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) overlap(val []float64) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" && '"+float64ArrayToSqlValue(val)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) lengthIs(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) = '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) lengthLessThan(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) < '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) lengthLessThanOrEqual(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) <= '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) lengthGreaterThan(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) > '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 func(wfba whereFieldFloatArray) lengthGreaterThanOrEqual(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) >= '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where
+	return wfba.where.ModelWhere()
 }
 {{else}}
 type whereFieldFloatArray{{.ModelName}} struct {
 	whereFieldFloatArray
-}
-
-func(wffa whereFieldFloatArray{{.ModelName}}) sqlName() string {
-	return "\"{{.ModelTableName}}\".\""+wffa.name+"\""
 }
 
 func(wffa whereFieldFloatArray{{.ModelName}}) Is(val []float64) *{{lower .ModelName}}Where {

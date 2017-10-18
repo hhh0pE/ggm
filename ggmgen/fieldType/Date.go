@@ -83,31 +83,30 @@ type whereFieldDate struct {
 	where modelWhere
 }
 func(wfd whereFieldDate) sqlName() string {
+	if strings.HasPrefix(wfd.name, "\"") { // already has table name
+		return wfd.name
+	}
 	return "\""+wfd.name+"\""
 }
 func (wfd whereFieldDate) is(d time.Time) modelWhere {
 	wfd.where.andOr()
 	wfd.where.addCond("\"" + wfd.name + "\" = '" + d.Format("2006-02-01") + "'")
-	return wfd.where
+	return wfd.where.ModelWhere()
 }
 func (wfd whereFieldDate) isNull() modelWhere {
 	wfd.where.andOr()
 	wfd.where.addCond(wfd.sqlName() + " IS NULL")
-	return wfd.where
+	return wfd.where.ModelWhere()
 }
 func (wfd whereFieldDate) isNotNull() modelWhere {
 	wfd.where.andOr()
 	wfd.where.addCond(wfd.sqlName() + " IS NOT NULL")
-	return wfd.where
+	return wfd.where.ModelWhere()
 }
 {{else}}
 type whereFieldDate{{.ModelName}} struct {
 	whereFieldDate
 }
-func(wfd whereFieldDate{{.ModelName}}) sqlName() string {
-	return "\"{{.ModelTableName}}\".\""+wfd.name+"\""
-}
-
 func (wfd whereFieldDate{{.ModelName}}) Is(d time.Time) *{{lower .ModelName}}Where {
 	return wfd.is(d).(*{{lower .ModelName}}Where)
 }
@@ -119,9 +118,6 @@ const DateNullableTemplate = `
 {{if .}}
 type whereFieldDateNullable{{.ModelName}} struct {
 	whereFieldDate{{.ModelName}}
-}
-func(wfdn whereFieldDateNullable{{.ModelName}}) sqlName() string {
-	return "\"{{.ModelTableName}}\".\""+wfdn.name+"\""
 }
 func (wfd whereFieldDateNullable{{.ModelName}}) IsNull() *{{lower .ModelName}}Where {
 	return wfd.isNull().(*{{lower .ModelName}}Where)

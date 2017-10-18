@@ -78,11 +78,23 @@ func Exec(sql string, args ...interface{}) (sql.Result, error) {
 type modelWhere interface{
     andOr()
     addCond(string)
-	addJoin(string)
+	addJoin(...string)
+	ModelWhere() modelWhere
 }
 
 type Model interface {
 	TableName() string
+}
+
+var joinMap = make(map[string]map[string]string)
+
+func init() {
+	{{range $model := .Models}}
+		joinMap["{{$model.Name}}"] = make(map[string]string)
+		{{range $relation := $model.DirectRelations}}	
+			joinMap["{{$relation.ModelFrom.Name}}"]["{{$relation.ModelTo.Name}}"] = ` + "`" + `{{$relation.SqlJoin.SqlString}}` + "`" + `
+		{{end}}
+	{{end}}
 }
 
 func RunMigration() error {
