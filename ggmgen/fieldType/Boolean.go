@@ -118,17 +118,17 @@ func(wfb whereFieldBoolean) is(val bool) modelWhere {
 	} else {
 		wfb.where.addCond(wfb.sqlName()+" = 'FALSE'")
 	}
-	return wfb.where.ModelWhere()
+	return wfb.where.modelWhere()
 }
 func (wfb whereFieldBoolean) isTrue() modelWhere {
 	wfb.where.andOr()
 	wfb.where.addCond(wfb.sqlName()+" = 'TRUE'")
-	return wfb.where.ModelWhere()
+	return wfb.where.modelWhere()
 }
 func (wfb whereFieldBoolean) isFalse() modelWhere {
 	wfb.where.andOr()
 	wfb.where.addCond(wfb.sqlName()+" = 'FALSE'")
-	return wfb.where.ModelWhere()
+	return wfb.where.modelWhere()
 }
 func (wfb whereFieldBoolean) fromStr(str string) modelWhere {
 	var val bool
@@ -141,12 +141,12 @@ func (wfb whereFieldBoolean) fromStr(str string) modelWhere {
 func (wfb whereFieldBoolean) isNull() modelWhere {
 	wfb.where.andOr()
 	wfb.where.addCond(wfb.sqlName()+" IS NULL")
-	return wfb.where.ModelWhere()
+	return wfb.where.modelWhere()
 }
 func (wfb whereFieldBoolean) isNotNull() modelWhere {
 	wfb.where.andOr()
 	wfb.where.addCond(wfb.sqlName()+" IS NOT NULL")
-	return wfb.where.ModelWhere()
+	return wfb.where.modelWhere()
 }
 {{else}}
 type whereFieldBoolean{{.ModelName}} struct {
@@ -197,72 +197,72 @@ func(wfba whereFieldBooleanArray) sqlName() string {
 func(wfba whereFieldBooleanArray) is(val []bool) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" = '"+boolArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) isNot(val []bool) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" <> '"+boolArrayToSqlValue(val)+"'")
-return wfba.where.ModelWhere()
+return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) lessThan(val []bool) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" < '"+boolArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) lessThanOrEqual(val []bool) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" <= '"+boolArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) greaterThan(val []bool) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" > '"+boolArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) greaterThanOrEqual(val []bool) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" > '"+boolArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) contains(val bool) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" @> '"+boolArrayToSqlValue([]bool{val})+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) containedBy(val []bool) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" <@ '"+boolArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) overlap(val []bool) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" && '"+boolArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) lengthIs(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) = '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) lengthLessThan(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) < '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) lengthLessThanOrEqual(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) <= '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) lengthGreaterThan(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) > '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldBooleanArray) lengthGreaterThanOrEqual(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) >= '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 {{else}}
 type whereFieldBooleanArray{{.ModelName}} struct {

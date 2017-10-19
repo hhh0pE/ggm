@@ -104,8 +104,6 @@ func goType(typeName string, ft FieldType) string {
 	return typeName
 }
 
-
-
 func GetAllFieldTypes() []FieldType {
 	return []FieldType{
 		BoolType.BaseType(false, false, false),

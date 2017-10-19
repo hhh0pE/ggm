@@ -71,7 +71,6 @@ func (d Decimal) ImplementScannerInterface() bool {
 	return d.GoBaseType() == d.GoScannerType()
 }
 
-
 const DecimalTemplate = `
 {{if not .}}
 type whereFieldDecimal struct {
@@ -87,53 +86,53 @@ func(wfi whereFieldDecimal) sqlName() string {
 func (wfi whereFieldDecimal) is(val ggm.Decimal) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" = '"+val.String()+"'")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) eq(val ggm.Decimal) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" = '"+val.String()+"'")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) equal(val ggm.Decimal) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" = '"+val.String()+"'")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) isNot(val ggm.Decimal) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" <> '"+val.String()+"'")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) greaterThan(val ggm.Decimal) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" > '"+val.String()+"'")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) greaterThanOrEqual(val ggm.Decimal) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" >= '"+val.String()+"'")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) lessThan(val ggm.Decimal) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" < '"+val.String()+"'")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) lessThanOrEqual(val ggm.Decimal) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" <= '"+val.String()+"'")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 
 func (wfi whereFieldDecimal) between(left, right ggm.Decimal) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" BETWEEN '"+left.String()+"' AND '"+right.String()+"'")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) notBetween(left, right ggm.Decimal) modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" NOT BETWEEN '"+left.String()+"' AND '"+right.String()+"'")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) in(nums []ggm.Decimal) modelWhere {
 	wfi.where.andOr()
@@ -147,17 +146,17 @@ func (wfi whereFieldDecimal) in(nums []ggm.Decimal) modelWhere {
 	}
 	cond += ")"
 	wfi.where.addCond(cond)
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) isNull() modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName()+" IS NULL")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 func (wfi whereFieldDecimal) isNotNull() modelWhere {
 	wfi.where.andOr()
 	wfi.where.addCond(wfi.sqlName() + " IS NOT NULL")
-	return wfi.where.ModelWhere()
+	return wfi.where.modelWhere()
 }
 {{else}}
 type whereFieldDecimal{{.ModelName}} struct {
@@ -215,7 +214,6 @@ func (wfi whereFieldDecimal{{.ModelName}}) Any(nums ...ggm.Decimal) *{{lower .Mo
 {{end}}
 `
 
-
 const DecimalNullableTemplate = `
 {{if .}}
 type whereFieldDecimalNullable{{.ModelName}} struct {
@@ -229,7 +227,6 @@ func (wff whereFieldDecimal{{.ModelName}}) IsNotNull() *{{lower .ModelName}}Wher
 }
 {{end}}
 `
-
 
 const DecimalArrayTemplate = `
 {{if not .}}
@@ -246,72 +243,72 @@ func(wfba whereFieldDecimalArray) sqlName() string {
 func(wfba whereFieldDecimalArray) is(val []ggm.Decimal) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" = '"+decimalArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) isNot(val []ggm.Decimal) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" <> '"+decimalArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) lessThan(val []ggm.Decimal) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" < '"+decimalArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) lessThanOrEqual(val []ggm.Decimal) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" <= '"+decimalArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) greaterThan(val []ggm.Decimal) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" > '"+decimalArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) greaterThanOrEqual(val []ggm.Decimal) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" > '"+decimalArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) contains(val ggm.Decimal) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" @> '"+decimalArrayToSqlValue([]ggm.Decimal{val})+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) containedBy(val []ggm.Decimal) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" <@ '"+decimalArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) overlap(val []ggm.Decimal) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond(wfba.sqlName()+" && '"+decimalArrayToSqlValue(val)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) lengthIs(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) = '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) lengthLessThan(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) < '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) lengthLessThanOrEqual(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) <= '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) lengthGreaterThan(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) > '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 func(wfba whereFieldDecimalArray) lengthGreaterThanOrEqual(len int) modelWhere {
 	wfba.where.andOr()
 	wfba.where.addCond("array_length("+wfba.sqlName()+", 1) >= '"+fmt.Sprintf("%d", len)+"'")
-	return wfba.where.ModelWhere()
+	return wfba.where.modelWhere()
 }
 {{else}}
 type whereFieldDecimalArray{{.ModelName}} struct {

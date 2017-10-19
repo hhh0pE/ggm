@@ -184,6 +184,9 @@ func scan{{.Name}}Row({{abbr .Name}} *{{.Name}}, fieldNames []string, row *sql.R
 func ({{abbr .Name}} {{lower .Name}}Query) ALL() []{{.Name}} {
 	rows, err := ormDB.Query({{abbr .Name}}.SQL())
 	if err != nil {
+		if ormDB == nil {
+			panic("initialize DB connection first!")
+		}
 		panic(err)
 	}
 	var {{lower .Name}}s []{{.Name}}
@@ -273,50 +276,16 @@ func ({{abbr .Name}} *{{lower .Name}}Query) WHERE() *{{lower .Name}}Where {
     if {{abbr .Name}}.{{lower .Name}}Where == nil {
         {{abbr .Name}}.{{lower .Name}}Where = new({{lower .Name}}Where)
         {{range $field := .Fields}}{{abbr $.Name}}.{{lower $.Name}}Where.{{$field.Name}}.where = {{abbr $.Name}}.{{lower $.Name}}Where
-        {{abbr $.Name}}.{{lower $.Name}}Where.{{$field.Name}}.name = "{{$field.TableName}}"
+        {{abbr $.Name}}.{{lower $.Name}}Where.{{$field.Name}}.name = "\"{{$field.Model.TableName}}\".\"{{$field.TableName}}\""
         {{end}}
         {{abbr .Name}}.{{lower .Name}}Where.query = {{abbr .Name}}
 
 	{{$prefix := print (abbr .Name) "." (lower .Name) "Where"}}
-	{{template "relationWhereInitialize" dict "Model" . "Prefix" $prefix "WhereName" $prefix "Joins" ""}}
+	{{template "relationWhereInitialize" dict "Model" . "Prefix" $prefix "WhereName" $prefix "Joins" "" "ExcludeModelName" ""}}
     }
 
 	return {{abbr .Name}}.{{lower .Name}}Where
 }
-
-{{define "relationWhereInitialize"}}
-	
-	{{- range $fk := .Model.ForeignKeys}}
-	{{$.Prefix}}.{{$fk.Field.Name}}.originalWhere = {{$.WhereName}}
-	{{if $.Joins}}
-		{{$joins := print $.Joins ", " "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
-		{{$.Prefix}}.{{$fk.Field.Name}}.joins = []string{ {{$joins}} }
-	{{else}}
-		{{$joins := print "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
-		{{$.Prefix}}.{{$fk.Field.Name}}.joins = []string{ {{$joins}} }
-	{{end}}
-
-	
-	
-		{{- range $field := $fk.ModelTo.Fields}}
-	{{$.Prefix}}.{{$fk.Field.Name}}.{{$field.Name}}.name = "\"{{$field.Model.TableName}}\".\"{{$field.TableName}}\""
-	{{$.Prefix}}.{{$fk.Field.Name}}.{{$field.Name}}.where = {{$.Prefix}}.{{$fk.Field.Name}}
-
-		{{- $newPrefix := print $.Prefix "." $fk.Field.Name -}}
-
-		{{if $.Joins}}
-			{{$joins := print $.Joins ", " "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
-			{{template "relationWhereInitialize" dict "Model" $fk.ModelTo "Prefix" $newPrefix "WhereName" $.WhereName "Joins" $joins}}
-		{{else}}
-			{{$joins := print "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
-			{{template "relationWhereInitialize" dict "Model" $fk.ModelTo "Prefix" $newPrefix "WhereName" $.WhereName "Joins" $joins}}
-		{{end}}
-
-		{{- end}}
-	
-	
-	{{- end -}}
-{{end}}
 
 {{define "stringSliceToText"}}
 	{{- range $elem := . -}}
@@ -458,6 +427,43 @@ func ({{abbr .Name}} *{{lower .Name}}Select) LIMIT(limit int) *{{lower .Name}}Qu
 {{template "modelWhereRelation" .}}
 
 
+
+{{define "relationWhereInitialize"}}
+	
+	{{- range $fk := .Model.ForeignKeys}}
+	{{if or (and $.ExcludeModelName (not (eq $.ExcludeModelName $fk.ModelTo.Name))) (eq $.ExcludeModelName "")}}
+	{{$.Prefix}}.{{$fk.Field.Name}}.originalWhere = {{$.WhereName}}
+	{{if $.Joins}}
+		{{$joins := print $.Joins ", " "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
+		{{$.Prefix}}.{{$fk.Field.Name}}.joins = append({{$.Prefix}}.joins, []string{ {{$joins}} }...)
+		
+	{{else}}
+		{{$joins := print "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
+		{{$.Prefix}}.{{$fk.Field.Name}}.joins = []string{ {{$joins}} }
+	{{end}}
+
+	
+	
+		{{- range $field := $fk.ModelTo.Fields}}
+	{{$.Prefix}}.{{$fk.Field.Name}}.{{$field.Name}}.name = "\"{{$field.Model.TableName}}\".\"{{$field.TableName}}\""
+	{{$.Prefix}}.{{$fk.Field.Name}}.{{$field.Name}}.where = {{$.Prefix}}.{{$fk.Field.Name}}
+
+		{{- $newPrefix := print $.Prefix "." $fk.Field.Name -}}
+
+		{{if $.Joins}}
+			{{$joins := print $.Joins ", " "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
+			{{template "relationWhereInitialize" dict "Model" $fk.ModelTo "Prefix" $newPrefix "WhereName" $.WhereName "Joins" $joins "ExcludeModelName" $.ExcludeModelName}}
+		{{else}}
+			{{$joins := print "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
+			{{template "relationWhereInitialize" dict "Model" $fk.ModelTo "Prefix" $newPrefix "WhereName" $.WhereName "Joins" $joins "ExcludeModelName" $.ExcludeModelName}}
+		{{end}}
+
+		{{- end}}
+	
+	{{end}}
+	{{- end -}}
+{{end}}
+
 {{define "modelWhereRelation"}}
 {{range $modelRelation := .Relations}}
 {{if not (eq $modelRelation.ModelTo.Name $.Name)}}
@@ -474,7 +480,7 @@ type whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Nam
 	originalWhere modelWhere
 }
 
-func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) ModelWhere() modelWhere {
+func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) modelWhere() modelWhere {
 	return wr.originalWhere
 }
 
@@ -492,7 +498,23 @@ func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.
 {{range $relation := $modelRelation.ModelTo.DirectRelations}}
 	{{if not (or (or (eq $relation.RelationType.String "ONE2ONE") (eq $relation.RelationType.String "ONE2MANY")) (eq $relation.ModelTo.Name $modelRelation.ModelFrom.Name) )}}
 func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) {{$relation.ModelTo.Name}}() whereRelation{{$modelRelation.ModelFrom.Name}}_{{$relation.ModelTo.Name}} {
-	return whereRelation{{$modelRelation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}{}
+
+	var newRelation whereRelation{{$modelRelation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}
+	newRelation.originalWhere = wr.originalWhere
+	newRelation.joins = append(wr.joins, []string{"{{$modelRelation.ModelTo.Name}}=>{{$relation.ModelTo.Name}}"}...)
+
+    {{range $field := $relation.ModelTo.Fields}}newRelation.{{$field.Name}}.where = newRelation
+    newRelation.{{$field.Name}}.name = "\"{{$field.Model.TableName}}\".\"{{$field.TableName}}\""
+    {{end}}
+        
+
+	{{$prefix := print "newRelation"}}
+	{{$whereName := print "wr.originalWhere"}}
+	{{$joins := print "\"" $modelRelation.ModelTo.Name "=>" $relation.ModelTo.Name "\"" }}
+	{{$excludeModelName := print $modelRelation.ModelFrom.Name }}
+	{{template "relationWhereInitialize" dict "Model" $relation.ModelTo "Prefix" $prefix "WhereName" $whereName "Joins" $joins "ExcludeModelName" $excludeModelName}}
+
+	return newRelation
 }
 	{{end}}
 {{end}}
@@ -513,8 +535,30 @@ type {{lower .Name}}Where struct {
 }
 {{range $relation := .DirectRelations}}
 	{{if not (or (eq $relation.RelationType.String "ONE2ONE") (eq $relation.RelationType.String "ONE2MANY"))}}
-func({{abbr $.Name}} {{lower $.Name}}Where) {{$relation.ModelTo.Name}}() whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}} {
-	return whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}{}
+func({{abbr $.Name}} *{{lower $.Name}}Where) {{$relation.ModelTo.Name}}() whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}} {
+
+
+	var newRelation whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}
+	newRelation.originalWhere = {{abbr $.Name}}
+	newRelation.joins = []string{"{{$relation.ModelFrom.Name}}=>{{$relation.ModelTo.Name}}"}
+
+    {{range $field := $relation.ModelTo.Fields}}
+    newRelation.{{$field.Name}}.where = &newRelation
+    newRelation.{{$field.Name}}.name = "\"{{$field.Model.TableName}}\".\"{{$field.TableName}}\""
+    {{end}}
+        
+
+	{{$prefix := print "newRelation"}}
+	{{$whereName := print (abbr $.Name)}}
+	{{$joins := print "\"" $relation.ModelFrom.Name "=>" $relation.ModelTo.Name "\"" }}
+	{{$excludeModelName := print $relation.ModelFrom.Name }}
+	{{template "relationWhereInitialize" dict "Model" $relation.ModelTo "Prefix" $prefix "WhereName" $whereName "Joins" $joins "ExcludeModelName" $excludeModelName}}
+
+	return newRelation
+
+
+
+	return newRelation
 }
 	{{end}}
 {{end}}
@@ -523,7 +567,7 @@ func ({{abbr .Name}} {{lower .Name}}Where) conditionSQL() string {
 	return {{abbr .Name}}.conds + ")"
 }
 
-func({{abbr .Name}} *{{lower .Name}}Where) ModelWhere() modelWhere {
+func({{abbr .Name}} *{{lower .Name}}Where) modelWhere() modelWhere {
 	return {{abbr .Name}}
 }
 

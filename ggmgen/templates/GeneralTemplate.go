@@ -27,7 +27,13 @@ func DisableDebug() {
 	debug = false
 }
 
-func ConnectToDBAndInit(userName, dbName, password, host string, port int) error {
+func ConnectToDb(userName, dbName, password, host string, port int) {
+	if connecting_err := connectToDBAndInit(userName, dbName, password, host, port); connecting_err != nil {
+		panic(connecting_err)
+	}
+}
+
+func connectToDBAndInit(userName, dbName, password, host string, port int) error {
 	if sqlConn, connecting_err := sql.Open("postgres", "user="+userName+" dbname="+dbName+" host="+host+" port="+fmt.Sprintf("%d", port)+" password="+password+" sslmode=disable"); connecting_err != nil {
 		return errors.New("connectToDb error: "+connecting_err.Error())
 	} else {
@@ -79,7 +85,7 @@ type modelWhere interface{
     andOr()
     addCond(string)
 	addJoin(...string)
-	ModelWhere() modelWhere
+	modelWhere() modelWhere
 }
 
 type Model interface {

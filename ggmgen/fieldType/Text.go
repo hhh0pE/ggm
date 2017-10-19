@@ -93,152 +93,152 @@ func(wft whereFieldText) sqlName() string {
 	}
 	return "\""+wft.name+"\""
 }
-func (wft *whereFieldText) is(val string) modelWhere {
+func (wft whereFieldText) is(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " = '" + val + "'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) isNot(val string) modelWhere {
+func (wft whereFieldText) isNot(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " <> '" + val + "'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) eq(val string) modelWhere {
+func (wft whereFieldText) eq(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " = '" + val + "'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) like(val string) modelWhere {
+func (wft whereFieldText) like(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " LIKE '" + val + "'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) notLike(val string) modelWhere {
+func (wft whereFieldText) notLike(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " NOT LIKE '" + val + "'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
 
-func (wft *whereFieldText) ilike(val string) modelWhere {
+func (wft whereFieldText) ilike(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " ILIKE '" + val + "'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) notILike(val string) modelWhere {
+func (wft whereFieldText) notILike(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " NOT ILIKE '" + val + "'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
 
-func (wft *whereFieldText) hasPrefix(val string) modelWhere {
+func (wft whereFieldText) hasPrefix(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " LIKE '" + val + "%'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) notHasPrefix(val string) modelWhere {
+func (wft whereFieldText) notHasPrefix(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " NOT LIKE '" + val + "%'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) ihasPrefix(val string) modelWhere {
+func (wft whereFieldText) ihasPrefix(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " ILIKE '" + val + "%'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) notIHasPrefix(val string) modelWhere {
+func (wft whereFieldText) notIHasPrefix(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " NOT ILIKE '" + val + "%'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) hasSuffix(val string) modelWhere {
+func (wft whereFieldText) hasSuffix(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " LIKE '" + val + "%'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) notHasSuffix(val string) modelWhere {
+func (wft whereFieldText) notHasSuffix(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " NOT LIKE '" + val + "%'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) ihasSuffix(val string) modelWhere {
+func (wft whereFieldText) ihasSuffix(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " ILIKE '%" + val + "'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) contains(val string) modelWhere {
+func (wft whereFieldText) contains(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " LIKE '%" + val + "%'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) notContains(val string) modelWhere {
+func (wft whereFieldText) notContains(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " NOT LIKE '%" + val + "%'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) notIContains(val string) modelWhere {
+func (wft whereFieldText) notIContains(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " ILIKE '%" + val + "%'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) icontains(val string) modelWhere {
+func (wft whereFieldText) icontains(val string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " ILIKE '%" + val + "%'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) any(val ...string) modelWhere {
+func (wft whereFieldText) any(val ...string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " IN ('" + strings.Join(val, "', '") + "')'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) notAny(val ...string) modelWhere {
+func (wft whereFieldText) notAny(val ...string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " NOT IN ('" + strings.Join(val, "', '") + "')'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) in(val []string) modelWhere {
+func (wft whereFieldText) in(val []string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " IN ('" + strings.Join(val, "', '") + "')'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) notIn(val []string) modelWhere {
+func (wft whereFieldText) notIn(val []string) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " NOT IN ('" + strings.Join(val, "', '") + "')'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) lengthIs(len int) modelWhere {
+func (wft whereFieldText) lengthIs(len int) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond("length(" + wft.sqlName() + ") = '"+fmt.Sprintf("%d", len)+"'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) lengthLessThan(len int) modelWhere {
+func (wft whereFieldText) lengthLessThan(len int) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond("length(" + wft.sqlName() + ") < '"+fmt.Sprintf("%d", len)+"'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) lengthGreaterThan(len int) modelWhere {
+func (wft whereFieldText) lengthGreaterThan(len int) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond("length(" + wft.sqlName() + ") > '"+fmt.Sprintf("%d", len)+"'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) lengthGreaterThanOrEqual(len int) modelWhere {
+func (wft whereFieldText) lengthGreaterThanOrEqual(len int) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond("length(" + wft.sqlName() + ") >= '"+fmt.Sprintf("%d", len)+"'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) lengthLessThanOrEqual(len int) modelWhere {
+func (wft whereFieldText) lengthLessThanOrEqual(len int) modelWhere {
 	wft.where.andOr()
 	wft.where.addCond("length(" + wft.sqlName() + ") <= '"+fmt.Sprintf("%d", len)+"'")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) isNull() modelWhere {
+func (wft whereFieldText) isNull() modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " IS NULL")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
-func (wft *whereFieldText) isNotNull() modelWhere {
+func (wft whereFieldText) isNotNull() modelWhere {
 	wft.where.andOr()
 	wft.where.addCond(wft.sqlName() + " IS NOT NULL")
-	return wft.where.ModelWhere()
+	return wft.where.modelWhere()
 }
 {{else}}
 type whereFieldText{{.ModelName}} struct {
@@ -250,99 +250,99 @@ func(wft whereFieldText{{.ModelName}}) sqlName() string {
 	}
 	return "\"{{.ModelTableName}}\".\""+wft.name+"\""
 }
-func (wft *whereFieldText{{.ModelName}}) Is(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) Is(val string) *{{lower .ModelName}}Where {
 	return wft.is(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) IsNot(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) IsNot(val string) *{{lower .ModelName}}Where {
 	return wft.isNot(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) Eq(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) Eq(val string) *{{lower .ModelName}}Where {
 	return wft.eq(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) Like(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) Like(val string) *{{lower .ModelName}}Where {
 	return wft.like(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) NotLike(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) NotLike(val string) *{{lower .ModelName}}Where {
 	return wft.notLike(val).(*{{lower .ModelName}}Where)
 }
 
-func (wft *whereFieldText{{.ModelName}}) ILike(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) ILike(val string) *{{lower .ModelName}}Where {
 	return wft.ilike(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) NotILike(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) NotILike(val string) *{{lower .ModelName}}Where {
 	return wft.notILike(val).(*{{lower .ModelName}}Where)
 }
 
-func (wft *whereFieldText{{.ModelName}}) HasPrefix(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) HasPrefix(val string) *{{lower .ModelName}}Where {
 	return wft.hasPrefix(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) NotHasPrefix(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) NotHasPrefix(val string) *{{lower .ModelName}}Where {
 	return wft.notHasPrefix(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) IHasPrefix(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) IHasPrefix(val string) *{{lower .ModelName}}Where {
 	return wft.ihasPrefix(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) NotIHasPrefix(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) NotIHasPrefix(val string) *{{lower .ModelName}}Where {
 	return wft.notIHasPrefix(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) HasSuffix(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) HasSuffix(val string) *{{lower .ModelName}}Where {
 	return wft.hasSuffix(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) NotHasSuffix(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) NotHasSuffix(val string) *{{lower .ModelName}}Where {
 	return wft.notHasSuffix(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) IHasSuffix(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) IHasSuffix(val string) *{{lower .ModelName}}Where {
 	return wft.ihasSuffix(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) Contains(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) Contains(val string) *{{lower .ModelName}}Where {
 	return wft.contains(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) NotContains(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) NotContains(val string) *{{lower .ModelName}}Where {
 	return wft.notContains(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) NotIContains(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) NotIContains(val string) *{{lower .ModelName}}Where {
 	return wft.notIContains(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) IContains(val string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) IContains(val string) *{{lower .ModelName}}Where {
 	return wft.icontains(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) Any(val ...string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) Any(val ...string) *{{lower .ModelName}}Where {
 	return wft.any(val...).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) NotAny(val ...string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) NotAny(val ...string) *{{lower .ModelName}}Where {
 	return wft.notAny(val...).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) In(val []string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) In(val []string) *{{lower .ModelName}}Where {
 	return wft.in(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) NotIn(val []string) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) NotIn(val []string) *{{lower .ModelName}}Where {
 	return wft.notIn(val).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) LengthIs(len int) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) LengthIs(len int) *{{lower .ModelName}}Where {
 	return wft.lengthIs(len).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) LengthLessThan(len int) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) LengthLessThan(len int) *{{lower .ModelName}}Where {
 	return wft.lengthLessThan(len).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) LengthLT(len int) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) LengthLT(len int) *{{lower .ModelName}}Where {
 	return wft.LengthLessThan(len)
 }
-func (wft *whereFieldText{{.ModelName}}) LengthGreaterThan(len int) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) LengthGreaterThan(len int) *{{lower .ModelName}}Where {
 	return wft.lengthGreaterThan(len).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) LengthGT(len int) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) LengthGT(len int) *{{lower .ModelName}}Where {
 	return wft.LengthGreaterThan(len)
 }
-func (wft *whereFieldText{{.ModelName}}) LengthGreaterThanOrEqual(len int) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) LengthGreaterThanOrEqual(len int) *{{lower .ModelName}}Where {
 	return wft.lengthGreaterThanOrEqual(len).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) LengthGTE(len int) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) LengthGTE(len int) *{{lower .ModelName}}Where {
 	return wft.LengthGreaterThanOrEqual(len)
 }
-func (wft *whereFieldText{{.ModelName}}) LengthLessThanOrEqual(len int) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) LengthLessThanOrEqual(len int) *{{lower .ModelName}}Where {
 	return wft.lengthLessThanOrEqual(len).(*{{lower .ModelName}}Where)
 }
-func (wft *whereFieldText{{.ModelName}}) LengthLTE(len int) *{{lower .ModelName}}Where {
+func (wft whereFieldText{{.ModelName}}) LengthLTE(len int) *{{lower .ModelName}}Where {
 	return wft.LengthLessThanOrEqual(len)
 }
 {{end}}
@@ -354,10 +354,10 @@ type whereFieldTextNullable{{.ModelName}} struct {
 	whereFieldText{{.ModelName}}
 }
 
-func (wftn *whereFieldTextNullable{{.ModelName}}) IsNull() *{{lower .ModelName}}Where {
+func (wftn whereFieldTextNullable{{.ModelName}}) IsNull() *{{lower .ModelName}}Where {
 	return wftn.isNull().(*{{lower .ModelName}}Where)
 }
-func (wftn *whereFieldTextNullable{{.ModelName}}) IsNotNull() *{{lower .ModelName}}Where {
+func (wftn whereFieldTextNullable{{.ModelName}}) IsNotNull() *{{lower .ModelName}}Where {
 	return wftn.isNotNull().(*{{lower .ModelName}}Where)
 }
 {{end}}
@@ -378,72 +378,72 @@ func(wfta whereFieldTextArray) sqlName() string {
 func(wfta whereFieldTextArray) is(val []string) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond(wfta.sqlName() + " = '"+stringArrayToSqlValue(val)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) isNot(val []string) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond(wfta.sqlName() + " <> '"+stringArrayToSqlValue(val)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) lessThan(val []string) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond(wfta.sqlName() + " < '"+stringArrayToSqlValue(val)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) lessThanOrEqual(val []string) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond(wfta.sqlName() + " <= '"+stringArrayToSqlValue(val)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) greaterThan(val []string) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond(wfta.sqlName() + " > '"+stringArrayToSqlValue(val)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) greaterThanOrEqual(val []string) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond(wfta.sqlName() + " > '"+stringArrayToSqlValue(val)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) contains(val string) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond(wfta.sqlName() + " @> '"+stringArrayToSqlValue([]string{val})+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) containedBy(val []string) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond(wfta.sqlName() + " <@ '"+stringArrayToSqlValue(val)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) overlap(val []string) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond(wfta.sqlName() + " && '"+stringArrayToSqlValue(val)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) lengthIs(len int) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond("array_length(" + wfta.sqlName() + ", 1) = '"+fmt.Sprintf("%d", len)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) lengthLessThan(len int) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond("array_length(" + wfta.sqlName() + ", 1) < '"+fmt.Sprintf("%d", len)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) lengthLessThanOrEqual(len int) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond("array_length(" + wfta.sqlName() + ", 1) <= '"+fmt.Sprintf("%d", len)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) lengthGreaterThan(len int) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond("array_length(" + wfta.sqlName() + ", 1) > '"+fmt.Sprintf("%d", len)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 func(wfta whereFieldTextArray) lengthGreaterThanOrEqual(len int) modelWhere {
 	wfta.where.andOr()
 	wfta.where.addCond("array_length(" + wfta.sqlName() + ", 1) >= '"+fmt.Sprintf("%d", len)+"'")
-	return wfta.where.ModelWhere()
+	return wfta.where.modelWhere()
 }
 {{else}}
 type whereFieldTextArray{{.ModelName}} struct {

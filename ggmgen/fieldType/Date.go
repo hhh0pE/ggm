@@ -1,9 +1,9 @@
 package fieldType
 
 type Date struct {
-	IsNullable   bool
-	IsArray      bool
-	IsGoBaseType bool
+	IsNullable      bool
+	IsArray         bool
+	IsGoBaseType    bool
 	WithoutTimezone bool
 }
 
@@ -75,7 +75,6 @@ func (d Date) ImplementScannerInterface() bool {
 	return d.GoBaseType() == d.GoScannerType()
 }
 
-
 const DateTemplate = `
 {{if not .}}
 type whereFieldDate struct {
@@ -91,17 +90,17 @@ func(wfd whereFieldDate) sqlName() string {
 func (wfd whereFieldDate) is(d time.Time) modelWhere {
 	wfd.where.andOr()
 	wfd.where.addCond("\"" + wfd.name + "\" = '" + d.Format("2006-02-01") + "'")
-	return wfd.where.ModelWhere()
+	return wfd.where.modelWhere()
 }
 func (wfd whereFieldDate) isNull() modelWhere {
 	wfd.where.andOr()
 	wfd.where.addCond(wfd.sqlName() + " IS NULL")
-	return wfd.where.ModelWhere()
+	return wfd.where.modelWhere()
 }
 func (wfd whereFieldDate) isNotNull() modelWhere {
 	wfd.where.andOr()
 	wfd.where.addCond(wfd.sqlName() + " IS NOT NULL")
-	return wfd.where.ModelWhere()
+	return wfd.where.modelWhere()
 }
 {{else}}
 type whereFieldDate{{.ModelName}} struct {
@@ -112,7 +111,6 @@ func (wfd whereFieldDate{{.ModelName}}) Is(d time.Time) *{{lower .ModelName}}Whe
 }
 {{end}}
 `
-
 
 const DateNullableTemplate = `
 {{if .}}
@@ -127,7 +125,6 @@ func (wfd whereFieldDateNullable{{.ModelName}}) IsNotNull() *{{lower .ModelName}
 }
 {{end}}
 `
-
 
 // TODO: DateArrayTemplate!!
 const DateArrayTemplate = `
