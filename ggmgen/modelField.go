@@ -114,7 +114,9 @@ func (mf modelField) TableName() string {
 	}
 	return tableName
 }
-
+func(mf modelField) FullQuotedTableName() string {
+	return "\""+mf.Model.TableName+"\".\""+mf.TableName()+"\""
+}
 func (mf modelField) Type() fieldType.FieldType {
 	if mf.fieldType == nil {
 		mf.fieldType = mf.ConstType.BaseType(mf.IsPointer, mf.IsArray, mf.IsGoBaseType)

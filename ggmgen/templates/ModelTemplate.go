@@ -152,16 +152,25 @@ func scan{{.Name}}Row({{abbr .Name}} *{{.Name}}, fieldNames []string, row *sql.R
 	{{- end}}
 	for i, _ := range fieldNames {
 		switch fieldNames[i] {
-	{{- range $field := .Fields}}
-		case "{{$field.TableName}}":
-			{{if $field.Type.ImplementScannerInterface -}}
+	{{- range $field := .AllFields}}
+		case ` + "`" + `{{$field.FullQuotedTableName}}` + "`" + `:
+			{{if $field.IsForeignKey}}
+			{{abbr $.Name}}.{{$field.Name}} = {{if $field.IsPointer}}new({{$field.Relation.ModelTo.Name}}){{else}}{{$field.Relation.ModelTo.Name}}{}{{end}}
+			fieldPointers = append(fieldPointers, {{if not $field.IsPointer}}&{{end}}{{abbr $.Name}}.{{$field.Name}}.{{$field.Relation.ModelTo.PrimaryKey.Name}})
+			{{else}}
+
+				{{if $field.Type.ImplementScannerInterface -}}
 			fieldPointers = append(fieldPointers, &{{abbr $.Name}}.{{$field.Name}})
-			{{- else -}}
+				{{- else -}}
 			fieldPointers = append(fieldPointers, &{{abbr $field.Name}}ForScan)
-			{{end -}}
+				{{end -}}
+
+			{{end}}
 	{{end}}
+
 		}
 	}
+	
 
 	scan_err := row.Scan(fieldPointers...)
 	if scan_err != nil {
@@ -171,7 +180,7 @@ func scan{{.Name}}Row({{abbr .Name}} *{{.Name}}, fieldNames []string, row *sql.R
 	for i, _ := range fieldNames {
 		switch fieldNames[i] {
 	{{range $field := .NotScannerFields}}
-		case "{{$field.TableName}}":
+		case ` + "`" + `{{$field.FullQuotedTableName}}` + "`" + `:
 			{{abbr $.Name}}.{{$field.Name}} = scannerTypeToBaseType({{abbr $field.Name}}ForScan, {{abbr $.Name}}.{{$field.Name}}).({{$field.Type.GoBaseType}})
 	{{end}}
 		}
@@ -375,14 +384,14 @@ type {{lower .Name}}SelectField struct {
 
 func ({{abbr .Name}} {{lower .Name}}Select) fieldNames() []string {
 	if len({{abbr .Name}}.fields) == 0 {
-		return []string{ {{range $field := $.Fields}}"{{$field.TableName}}",{{end}} }
+		return []string{ {{range $field := $.AllFields}}` + "`" + `{{$field.FullQuotedTableName}}` + "`" + `,{{end}} }
 	}
 	return {{abbr .Name}}.fields
 }
 func ({{abbr .Name}} {{lower .Name}}Select) fieldsSQL() string {
 	var sqlFields []string
 	for _, f := range {{abbr .Name}}.fieldNames() {
-		sqlFields = append(sqlFields, "\"{{.TableName}}\".\""+f+"\"")
+		sqlFields = append(sqlFields, f)
 	}
 
 	return strings.Join(sqlFields, ", ")
