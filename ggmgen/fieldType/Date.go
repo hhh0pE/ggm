@@ -82,10 +82,7 @@ type whereFieldDate struct {
 	where modelWhere
 }
 func(wfd whereFieldDate) sqlName() string {
-	if strings.HasPrefix(wfd.name, "\"") { // already has table name
-		return wfd.name
-	}
-	return "\""+wfd.name+"\""
+	return wfd.name
 }
 func (wfd whereFieldDate) is(d time.Time) modelWhere {
 	wfd.where.andOr()

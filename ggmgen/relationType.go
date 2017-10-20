@@ -33,6 +33,10 @@ func (frs ForeignRelationSlice) SqlString() string {
 	return result
 }
 
+// func (mr modelRelation) FieldCondition() string {
+// 	return "\"" + mr.ModelFrom.TableName + "\".\"" + mr.Field.TableName() + "\"=\"" + mr.ModelTo.TableName + "\".\"" + mr.ModelTo.PrimaryKey().TableName() + "\""
+// }
+
 func (mr modelRelation) SqlJoin() ForeignRelationSlice {
 	if mr.ViaModel != nil {
 		return []string{

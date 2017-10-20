@@ -78,10 +78,7 @@ type whereFieldDecimal struct {
 	where modelWhere
 }
 func(wfi whereFieldDecimal) sqlName() string {
-	if strings.HasPrefix(wfi.name, "\"") { // already has table name
-		return wfi.name
-	}
-	return "\""+wfi.name+"\""
+	return wfi.name
 }
 func (wfi whereFieldDecimal) is(val ggm.Decimal) modelWhere {
 	wfi.where.andOr()
@@ -235,10 +232,7 @@ type whereFieldDecimalArray struct {
 	where modelWhere
 }
 func(wfba whereFieldDecimalArray) sqlName() string {
-	if strings.HasPrefix(wfba.name, "\"") { // already has table name
-		return wfba.name
-	}
-	return "\""+wfba.name+"\""
+	return wfba.name
 }
 func(wfba whereFieldDecimalArray) is(val []ggm.Decimal) modelWhere {
 	wfba.where.andOr()

@@ -83,10 +83,7 @@ type whereFieldFloat struct {
 	where modelWhere
 }
 func (wff whereFieldFloat) sqlName() string {
-	if strings.HasPrefix(wff.name, "\"") { // already has table name
-		return wff.name
-	}
-	return "\""+wff.name+"\""
+	return wff.name
 }
 
 func (wfi whereFieldFloat) is(val float64) modelWhere {
@@ -257,10 +254,7 @@ type whereFieldFloatArray struct {
 }
 
 func(wfba whereFieldFloatArray) sqlName() string {
-	if strings.HasPrefix(wfba.name, "\"") { // already has table name
-		return wfba.name
-	}
-	return "\""+wfba.name+"\""
+	return wfba.name
 }
 
 func(wfba whereFieldFloatArray) is(val []float64) modelWhere {

@@ -82,10 +82,7 @@ type whereFieldInteger struct {
 	where modelWhere
 }
 func(wfi whereFieldInteger) sqlName() string {
-	if strings.HasPrefix(wfi.name, "\"") { // already has table name
-		return wfi.name
-	}
-	return "\""+wfi.name+"\""
+	return wfi.name
 }
 func (wfi whereFieldInteger) is(val int) modelWhere {
 	wfi.where.andOr()
@@ -254,10 +251,7 @@ type whereFieldIntegerArray struct {
 	where modelWhere
 }
 func(wfia whereFieldIntegerArray) sqlName() string {
-	if strings.HasPrefix(wfia.name, "\"") { // already has table name
-		return wfia.name
-	}
-	return "\""+wfia.name+"\""
+	return wfia.name
 }
 func(wfia whereFieldIntegerArray) is(val []int64) modelWhere {
 	wfia.where.andOr()

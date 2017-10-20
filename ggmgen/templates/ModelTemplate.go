@@ -140,7 +140,7 @@ func get{{.Name}}FieldPointers({{abbr .Name}} *{{.Name}}, fieldNames []string) [
 type {{lower .Name}}Query struct {
 	{{lower .Name}}Select  {{lower .Name}}Select
 	{{lower .Name}}Where   *{{lower .Name}}Where
-	joins        []string
+	joins        []joinChain
 	limit           int
 	{{lower .Name}}OrderBy *{{lower .Name}}OrderBy
 }
@@ -167,6 +167,7 @@ func scan{{.Name}}Row({{abbr .Name}} *{{.Name}}, fieldNames []string, row *sql.R
 
 			{{end}}
 	{{end}}
+	
 
 		}
 	}
@@ -247,19 +248,19 @@ func ({{abbr .Name}} {{lower .Name}}Query) SQL() string {
         whereStr = " WHERE " + {{abbr .Name}}.{{lower .Name}}Where.conditionSQL()
     }
 
-	if {{abbr .Name}}.joins != nil && len({{abbr .Name}}.joins) > 0 {
-		joinUniqueMap := make(map[string]bool)
-		for _, join := range {{abbr .Name}}.joins {
-			if _, alreadyExist := joinUniqueMap[join]; !alreadyExist {
-				joinUniqueMap[join] = true
-				if joinParts := strings.Split(join, "=>"); len(joinParts) == 2 {
-					if joinText, joinExist := joinMap[joinParts[0]][joinParts[1]]; joinExist {
-						joinStr += joinText
-					} else {
-						log.Println("doesn't exist relation in joinMap :( "+join)
+	if {{abbr .Name}}.joins != nil && len({{abbr .Name}}.joins) > 0 {		
+		for _, joinChain := range {{abbr .Name}}.joins {
+			newJoinLines := strings.Split(joinChain.SQL("{{.TableName}}"), "\n")
+			for _, newLine := range newJoinLines {
+				var alreadyExist bool
+				for _, alreadyExistLine := range strings.Split(joinStr, "\n") {
+					if newLine == alreadyExistLine {
+						alreadyExist = true
+						break
 					}
-				} else {
-					log.Println("not exist join pair: "+join)
+				}
+				if !alreadyExist {
+					joinStr += "\n" + newLine
 				}
 			}
 		}
@@ -290,7 +291,7 @@ func ({{abbr .Name}} *{{lower .Name}}Query) WHERE() *{{lower .Name}}Where {
         {{abbr .Name}}.{{lower .Name}}Where.query = {{abbr .Name}}
 
 	{{$prefix := print (abbr .Name) "." (lower .Name) "Where"}}
-	{{template "relationWhereInitialize" dict "Model" . "Prefix" $prefix "WhereName" $prefix "Joins" "" "ExcludeModelName" ""}}
+	{{template "relationWhereInitialize" dict "Model" . "Prefix" $prefix "WhereName" $prefix "ExcludeModelName" ""}}
     }
 
 	return {{abbr .Name}}.{{lower .Name}}Where
@@ -442,30 +443,22 @@ func ({{abbr .Name}} *{{lower .Name}}Select) LIMIT(limit int) *{{lower .Name}}Qu
 	{{- range $fk := .Model.ForeignKeys}}
 	{{if or (and $.ExcludeModelName (not (eq $.ExcludeModelName $fk.ModelTo.Name))) (eq $.ExcludeModelName "")}}
 	{{$.Prefix}}.{{$fk.Field.Name}}.originalWhere = {{$.WhereName}}
-	{{if $.Joins}}
-		{{$joins := print $.Joins ", " "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
-		{{$.Prefix}}.{{$fk.Field.Name}}.joins = append({{$.Prefix}}.joins, []string{ {{$joins}} }...)
-		
-	{{else}}
-		{{$joins := print "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
-		{{$.Prefix}}.{{$fk.Field.Name}}.joins = []string{ {{$joins}} }
-	{{end}}
-
 	
+	{{$tableAlias := print $fk.Field.Model.Name "_" $fk.Field.Name}}
+
+	//{{$.Prefix}}.{{$fk.Field.Name}}.joins.AddJoin("{{$fk.ModelFrom.Name}}", "")
+	{{if $.NestedCall}}
+	{{$.Prefix}}.{{$fk.Field.Name}}.joins = {{$.Prefix}}.joins
+	{{end}}
+	{{$.Prefix}}.{{$fk.Field.Name}}.joins.AddJoin("{{$fk.ModelTo.TableName}}", "{{$tableAlias}}")	
 	
 		{{- range $field := $fk.ModelTo.Fields}}
-	{{$.Prefix}}.{{$fk.Field.Name}}.{{$field.Name}}.name = "\"{{$field.Model.TableName}}\".\"{{$field.TableName}}\""
+	{{$.Prefix}}.{{$fk.Field.Name}}.{{$field.Name}}.name = "{{$tableAlias}}.\"{{$field.TableName}}\""
 	{{$.Prefix}}.{{$fk.Field.Name}}.{{$field.Name}}.where = {{$.Prefix}}.{{$fk.Field.Name}}
 
 		{{- $newPrefix := print $.Prefix "." $fk.Field.Name -}}
 
-		{{if $.Joins}}
-			{{$joins := print $.Joins ", " "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
-			{{template "relationWhereInitialize" dict "Model" $fk.ModelTo "Prefix" $newPrefix "WhereName" $.WhereName "Joins" $joins "ExcludeModelName" $.ExcludeModelName}}
-		{{else}}
-			{{$joins := print "\"" $fk.ModelFrom.Name "=>" $fk.ModelTo.Name "\""}}
-			{{template "relationWhereInitialize" dict "Model" $fk.ModelTo "Prefix" $newPrefix "WhereName" $.WhereName "Joins" $joins "ExcludeModelName" $.ExcludeModelName}}
-		{{end}}
+		{{template "relationWhereInitialize" dict "Model" $fk.ModelTo "Prefix" $newPrefix "WhereName" $.WhereName "ExcludeModelName" $.ExcludeModelName "NestedCall" true}}
 
 		{{- end}}
 	
@@ -485,7 +478,7 @@ type whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Nam
 		{{end}}
 	{{end}}
 
-	joins []string
+	joins joinChain
 	originalWhere modelWhere
 }
 
@@ -494,11 +487,12 @@ func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.
 }
 
 func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) addCond(cond string) {
-	wr.originalWhere.addJoin(wr.joins...)
+	wr.originalWhere.addJoinChain(wr.joins)
 	wr.originalWhere.addCond(cond)
 }
-func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) addJoin(join ...string) {
-	wr.originalWhere.addJoin(join...)
+
+func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) addJoinChain(join joinChain) {
+	wr.originalWhere.addJoinChain(join)
 }
 func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) andOr() {
 	wr.originalWhere.andOr()
@@ -510,7 +504,7 @@ func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.
 
 	var newRelation whereRelation{{$modelRelation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}
 	newRelation.originalWhere = wr.originalWhere
-	newRelation.joins = append(wr.joins, []string{"{{$modelRelation.ModelTo.Name}}=>{{$relation.ModelTo.Name}}"}...)
+	newRelation.joins.AddJoin("{{$relation.ModelTo.Name}}", "")
 
     {{range $field := $relation.ModelTo.Fields}}newRelation.{{$field.Name}}.where = newRelation
     newRelation.{{$field.Name}}.name = "\"{{$field.Model.TableName}}\".\"{{$field.TableName}}\""
@@ -519,9 +513,8 @@ func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.
 
 	{{$prefix := print "newRelation"}}
 	{{$whereName := print "wr.originalWhere"}}
-	{{$joins := print "\"" $modelRelation.ModelTo.Name "=>" $relation.ModelTo.Name "\"" }}
 	{{$excludeModelName := print $modelRelation.ModelFrom.Name }}
-	{{template "relationWhereInitialize" dict "Model" $relation.ModelTo "Prefix" $prefix "WhereName" $whereName "Joins" $joins "ExcludeModelName" $excludeModelName}}
+	{{template "relationWhereInitialize" dict "Model" $relation.ModelTo "Prefix" $prefix "WhereName" $whereName "ExcludeModelName" $excludeModelName}}
 
 	return newRelation
 }
@@ -549,7 +542,7 @@ func({{abbr $.Name}} *{{lower $.Name}}Where) {{$relation.ModelTo.Name}}() whereR
 
 	var newRelation whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}
 	newRelation.originalWhere = {{abbr $.Name}}
-	newRelation.joins = []string{"{{$relation.ModelFrom.Name}}=>{{$relation.ModelTo.Name}}"}
+	newRelation.joins.AddJoin("{{$relation.ModelTo.Name}}", "")
 
     {{range $field := $relation.ModelTo.Fields}}
     newRelation.{{$field.Name}}.where = &newRelation
@@ -559,9 +552,8 @@ func({{abbr $.Name}} *{{lower $.Name}}Where) {{$relation.ModelTo.Name}}() whereR
 
 	{{$prefix := print "newRelation"}}
 	{{$whereName := print (abbr $.Name)}}
-	{{$joins := print "\"" $relation.ModelFrom.Name "=>" $relation.ModelTo.Name "\"" }}
 	{{$excludeModelName := print $relation.ModelFrom.Name }}
-	{{template "relationWhereInitialize" dict "Model" $relation.ModelTo "Prefix" $prefix "WhereName" $whereName "Joins" $joins "ExcludeModelName" $excludeModelName}}
+	{{template "relationWhereInitialize" dict "Model" $relation.ModelTo "Prefix" $prefix "WhereName" $whereName "ExcludeModelName" $excludeModelName}}
 
 	return newRelation
 
@@ -609,8 +601,8 @@ func ({{abbr .Name}} *{{lower .Name}}Where) addCond(cond string) {
 	}*/
     {{abbr .Name}}.conds += cond
 }
-func ({{abbr .Name}} *{{lower .Name}}Where) addJoin(joins ...string) {
-	{{abbr .Name}}.query.joins = append({{abbr .Name}}.query.joins, joins...)
+func ({{abbr .Name}} *{{lower .Name}}Where) addJoinChain(join joinChain) {
+	{{abbr .Name}}.query.joins = append({{abbr .Name}}.query.joins, join)
 }
 func ({{abbr .Name}} *{{lower .Name}}Where) ALL() []{{.Name}} {
     return {{abbr .Name}}.query.ALL()

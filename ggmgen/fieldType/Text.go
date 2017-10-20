@@ -88,10 +88,7 @@ type whereFieldText struct {
 	where modelWhere
 }
 func(wft whereFieldText) sqlName() string {
-	if strings.HasPrefix(wft.name, "\"") { // already has table name
-		return wft.name
-	}
-	return "\""+wft.name+"\""
+	return wft.name
 }
 func (wft whereFieldText) is(val string) modelWhere {
 	wft.where.andOr()
@@ -244,12 +241,6 @@ func (wft whereFieldText) isNotNull() modelWhere {
 type whereFieldText{{.ModelName}} struct {
 	whereFieldText
 }
-func(wft whereFieldText{{.ModelName}}) sqlName() string {
-	if strings.HasPrefix(wft.name, "\"") { // already has table name
-		return wft.name
-	}
-	return "\"{{.ModelTableName}}\".\""+wft.name+"\""
-}
 func (wft whereFieldText{{.ModelName}}) Is(val string) *{{lower .ModelName}}Where {
 	return wft.is(val).(*{{lower .ModelName}}Where)
 }
@@ -370,10 +361,7 @@ type whereFieldTextArray struct {
 	where modelWhere
 }
 func(wfta whereFieldTextArray) sqlName() string {
-	if strings.HasPrefix(wfta.name, "\"") { // already has table name
-		return wfta.name
-	}
-	return "\""+wfta.name+"\""
+	return wfta.name
 }
 func(wfta whereFieldTextArray) is(val []string) modelWhere {
 	wfta.where.andOr()

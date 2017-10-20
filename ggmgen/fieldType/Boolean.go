@@ -106,10 +106,7 @@ type whereFieldBoolean struct {
 	where modelWhere
 }
 func (wfb whereFieldBoolean) sqlName() string {
-	if strings.HasPrefix(wfb.name, "\"") { // already has table name
 		return wfb.name
-	}
-	return "\"{{.ModelTableName}}\".\""+wfb.name+"\""
 }
 func(wfb whereFieldBoolean) is(val bool) modelWhere {
 	wfb.where.andOr()
@@ -189,10 +186,7 @@ type whereFieldBooleanArray struct {
 	where modelWhere
 }
 func(wfba whereFieldBooleanArray) sqlName() string {
-	if strings.HasPrefix(wfba.name, "\"") { // already has table name
-		return wfba.name
-	}
-	return "\""+wfba.name+"\""
+	return wfba.name
 }
 func(wfba whereFieldBooleanArray) is(val []bool) modelWhere {
 	wfba.where.andOr()
