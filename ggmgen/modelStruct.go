@@ -85,7 +85,7 @@ func (ms *ModelStruct) DirectRelations() []modelRelation {
 		var modelRelations []modelRelation
 		for fi, f := range ms.fields {
 			if f.Relation != nil {
-				newRelation := modelRelation{ModelFrom: ms, ModelTo: f.Relation.modelTo, Field:&ms.fields[fi]}
+				newRelation := modelRelation{ModelFrom: ms, ModelTo: f.Relation.modelTo, Field: &ms.fields[fi]}
 				if f.IsUnique() {
 					newRelation.RelationType = ONE2ONE
 				} else {
@@ -136,7 +136,7 @@ func (ms *ModelStruct) DirectRelations() []modelRelation {
 							continue
 						}
 						var newRelation modelRelation
-						newRelation.Field = fk.Field
+						// newRelation.Field = fk.Field
 						newRelation.ModelFrom = ms
 						newRelation.ViaModel = m
 						newRelation.ModelTo = fk.modelTo

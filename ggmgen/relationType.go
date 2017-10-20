@@ -38,15 +38,55 @@ func (frs ForeignRelationSlice) SqlString() string {
 // }
 
 func (mr modelRelation) SqlJoin() ForeignRelationSlice {
+	var modelFrom, modelTo *ModelStruct
+	modelFrom = mr.ModelFrom
+	modelTo = mr.ModelTo
+
+	var fieldFrom, fieldTo *modelField
+
 	if mr.ViaModel != nil {
-		return []string{
-			`INNER JOIN "` + mr.ViaModel.TableName + `" ON "` + mr.ModelFrom.TableName + `"."` + mr.Field.TableName() + `" = "` + mr.ViaModel.TableName + `"."` + mr.ViaModel.PrimaryKey().TableName() + `"`,
-			`INNER JOIN "` + mr.ModelTo.TableName + `" ON "` + mr.ViaModel.TableName + `"."` + mr.ViaModel.PrimaryKey().TableName() + `" = "` + mr.ModelTo.TableName + `"."` + mr.ModelTo.PrimaryKey().TableName() + `"`,
+		directRelations := mr.ViaModel.DirectRelations()
+		for dri, dr := range directRelations {
+			if dr.ModelTo.Name == modelFrom.Name {
+				fieldFrom = directRelations[dri].Field
+			}
+			if dr.ModelTo.Name == modelTo.Name {
+				fieldTo = directRelations[dri].Field
+			}
 		}
+		return []string{
+			`INNER JOIN "` + mr.ViaModel.TableName + `" ON "` + mr.ViaModel.TableName + `"."` + fieldFrom.TableName() + `" = "` + modelFrom.TableName + `"."` + modelTo.PrimaryKey().TableName() + `"`,
+			`INNER JOIN "` + modelTo.TableName + `" ON "` + modelTo.TableName + `"."` + modelTo.PrimaryKey().TableName() + `" = "` + mr.ViaModel.TableName + `"."` + fieldTo.TableName() + `"`,
+		}
+		// return []string{
+		// 	`INNER JOIN "` + mr.ViaModel.TableName + `" ON "` + modelFrom.TableName + `"."` + fromFieldName + `" = "` + mr.ViaModel.TableName + `"."` + mr.ViaModel.PrimaryKey().TableName() + `"`,
+		// 	`INNER JOIN "` + modelTo.TableName + `" ON "` + mr.ViaModel.TableName + `"."` + mr.ViaModel.PrimaryKey().TableName() + `" = "` + modelTo.TableName + `"."` + toFieldName + `"`,
+		// }
 	} else {
-		return []string{
-			`INNER JOIN "` + mr.ModelTo.TableName + `" ON "` + mr.ModelFrom.TableName + `"."` + mr.Field.TableName() + `" = "` + mr.ModelTo.TableName + `"."` + mr.ModelTo.PrimaryKey().TableName() + `"`,
+		if mr.RelationType == ONE2MANY {
+			modelFrom = mr.ModelFrom
+			fieldFrom = mr.Field
+
+			modelTo = mr.ModelTo
+			fieldTo = modelTo.PrimaryKey()
+		} else {
+			modelFrom = mr.ModelFrom
+			fieldFrom = mr.ModelFrom.PrimaryKey()
+
+			modelTo = mr.ModelTo
+			fieldTo = mr.Field
 		}
+		// if mr.RelationType == MANY2ONE {
+		// 	return []string{
+		// 		`INNER JOIN "` + mr.ModelTo.TableName + `" ON "` + mr.ModelTo.TableName + `"."` + mr.Field.TableName() + `" = "` + mr.ModelFrom.TableName + `"."` + mr.ModelTo.PrimaryKey().TableName() + `"`,
+		// 	}
+		// } else {
+
+		return []string{
+			`INNER JOIN "` + modelTo.TableName + `" ON "` + modelFrom.TableName + `"."` + fieldFrom.TableName() + `" = "` + modelTo.TableName + `"."` + fieldTo.TableName() + `"`,
+		}
+		// }
+
 	}
 }
 

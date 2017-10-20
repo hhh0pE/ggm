@@ -504,17 +504,19 @@ func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.
 
 	var newRelation whereRelation{{$modelRelation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}
 	newRelation.originalWhere = wr.originalWhere
-	newRelation.joins.AddJoin("{{$relation.ModelTo.Name}}", "")
+	{{$alias := print $relation.ModelFrom.Name "_" $relation.ModelTo.Name}}
+	newRelation.joins = wr.joins
+	newRelation.joins.AddJoin("{{$relation.ModelTo.TableName}}", "{{$alias}}")
 
     {{range $field := $relation.ModelTo.Fields}}newRelation.{{$field.Name}}.where = newRelation
-    newRelation.{{$field.Name}}.name = "\"{{$field.Model.TableName}}\".\"{{$field.TableName}}\""
+    newRelation.{{$field.Name}}.name = "{{$alias}}.\"{{$field.TableName}}\""
     {{end}}
         
 
 	{{$prefix := print "newRelation"}}
 	{{$whereName := print "wr.originalWhere"}}
 	{{$excludeModelName := print $modelRelation.ModelFrom.Name }}
-	{{template "relationWhereInitialize" dict "Model" $relation.ModelTo "Prefix" $prefix "WhereName" $whereName "ExcludeModelName" $excludeModelName}}
+	{{template "relationWhereInitialize" dict "Model" $relation.ModelTo "Prefix" $prefix "WhereName" $whereName "ExcludeModelName" $excludeModelName "NestedCall" true}}
 
 	return newRelation
 }
@@ -541,19 +543,20 @@ func({{abbr $.Name}} *{{lower $.Name}}Where) {{$relation.ModelTo.Name}}() whereR
 
 
 	var newRelation whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}
+	{{$alias := print $relation.ModelFrom.Name "_" $relation.ModelTo.Name}}
 	newRelation.originalWhere = {{abbr $.Name}}
-	newRelation.joins.AddJoin("{{$relation.ModelTo.Name}}", "")
+	newRelation.joins.AddJoin("{{$relation.ModelTo.TableName}}", "{{$alias}}")
 
     {{range $field := $relation.ModelTo.Fields}}
     newRelation.{{$field.Name}}.where = &newRelation
-    newRelation.{{$field.Name}}.name = "\"{{$field.Model.TableName}}\".\"{{$field.TableName}}\""
+    newRelation.{{$field.Name}}.name = "{{$alias}}.\"{{$field.TableName}}\""
     {{end}}
         
 
 	{{$prefix := print "newRelation"}}
 	{{$whereName := print (abbr $.Name)}}
 	{{$excludeModelName := print $relation.ModelFrom.Name }}
-	{{template "relationWhereInitialize" dict "Model" $relation.ModelTo "Prefix" $prefix "WhereName" $whereName "ExcludeModelName" $excludeModelName}}
+	{{template "relationWhereInitialize" dict "Model" $relation.ModelTo "Prefix" $prefix "WhereName" $whereName "ExcludeModelName" $excludeModelName "NestedCall" true}}
 
 	return newRelation
 
