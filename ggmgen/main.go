@@ -60,17 +60,19 @@ func main() {
 			if write_err != nil {
 				fmt.Println("write err", write_err.Error())
 			}
-			goimports_err := exec.Command("goimports", "-w", tmpFile.Name()).Run()
+			goimportsOutput, goimports_err := exec.Command("goimports", "-w", tmpFile.Name()).CombinedOutput()
 			if goimports_err != nil {
 				fmt.Println("goimports error: " + goimports_err.Error())
 			}
+
+			log.Println("goimports output: " + string(goimportsOutput))
 			var tmp_reading_err error
 			newContent, tmp_reading_err = ioutil.ReadAll(tmpFile)
 			if tmp_reading_err != nil {
 				fmt.Println("tmp_reading_err", tmp_reading_err.Error())
 			}
 
-			defer os.Remove(tmpFile.Name())
+			os.Remove(tmpFile.Name())
 		}
 
 		var ggm_read_err error

@@ -291,6 +291,25 @@ func (ms ModelStruct) ForeignKeys() []tableForeignRelation {
 func (ms ModelStruct) Indexes() []modelIndex {
 	return ms.indexes
 }
+func (ms ModelStruct) MustBeUniqueFields() []modelField {
+	var fields []modelField
+	for _, index := range ms.Indexes() {
+		if index.IsCoalesce() {
+			for _, indexField := range index.Fields() {
+				var alredyExist bool
+				for _, alreadyExistField := range fields {
+					if indexField.Name == alreadyExistField.Name && indexField.Relation.Field == alreadyExistField.Relation.Field && indexField.Relation.modelTo == alreadyExistField.Relation.modelTo {
+						alredyExist = true
+					}
+				}
+				if !alredyExist {
+					fields = append(fields, indexField)
+				}
+			}
+		}
+	}
+	return fields
+}
 
 func (ms *ModelStruct) AddFields(mfs []modelField) {
 	if mfs == nil {

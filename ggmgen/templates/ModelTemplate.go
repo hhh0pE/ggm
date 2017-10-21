@@ -9,7 +9,10 @@ func ({{abbr .Name}} {{.Name}}) TableName() string {
 }
 {{end}}
 
-func isEmpty{{.Name}}({{abbr .Name}} {{.Name}}) bool {
+func isEmpty{{.Name}}({{abbr .Name}} *{{.Name}}) bool {
+	if {{abbr .Name}} == nil {
+		return true
+	}
 	{{- range $field := .Fields}}
 	if {{if $field.Type.IsNullable}}{{abbr $.Name}}.{{$field.Name}} != nil && {{end -}}
 	{{$field.FieldValueName (abbr $.Name)}} != {{$field.DefaultValue}} {
@@ -19,63 +22,108 @@ func isEmpty{{.Name}}({{abbr .Name}} {{.Name}}) bool {
 	return true
 }
 
+{{define "isFieldEmptyCondition"}}
+{{- if $.Field.IsPointer}}{{$.Field.Name}} != nil && {{end}} 
+{{if $.Field.IsForeignKey -}}
+{{$.Field.FieldValueName $.Abbr}} == {{$.Field.DefaultValue}}
+{{- else -}}
+{{$.Field.FieldValueName ($.Abbr)}} == {{$.Field.DefaultValue}}
+{{- end -}}
+
+{{- end}}
+
+{{define "isFieldNotEmptyCondition"}}
+{{- if $.Field.IsPointer}}{{$.Field.Name}} != nil && {{end}} 
+{{if $.Field.IsForeignKey -}}
+{{$.Field.Relation.Field.Name $.Abbr}}.{{$.Field.FieldValueName ""}} != {{$.Field.DefaultValue}}
+{{- else -}}
+{{$.Field.FieldValueName ($.Abbr)}} != {{$.Field.DefaultValue}}
+{{- end -}}
+
+{{- end}}
+
+func check{{.Name}}({{abbr .Name}} *{{.Name}}) error {
+	if isEmpty{{.Name}}({{abbr .Name}}) {
+		return errors.New("empty {{.Name}} model")
+	}
+	{{range $index := .Indexes}}{{if not $index.IsCoalesce}}
+	if {{range $ifi, $indexField := $index.Fields -}}
+	{{- $indexField.FieldValueName (abbr $.Name)}} == {{$indexField.DefaultValue}}{{if IsNotLastElement $ifi (len $index.Fields)}} && {{end}}
+	{{- end}} {
+		return errors.New("model {{$.Name}} with empty {{$index.Name}} index")
+	}
+	{{end}}{{end}}
+
+	{{range $fk := .ForeignKeys}}
+		if {{template "isFieldEmptyCondition" dict "Field" $fk.Field "Abbr" (abbr $.Name)}} {
+			return errors.New("model {{$.Name}} with empty Foreign Key {{$fk.Field.Name}} (model {{$fk.ModelTo.Name}})")
+		}
+	{{end}}
+
+	return nil
+}
+
 func save{{.Name}}({{abbr .Name}} *{{.Name}}) error {
-	if inserting_err := insert{{.Name}}({{abbr .Name}}); inserting_err != nil {
+	if err := check{{.Name}}({{abbr .Name}}); err != nil {
+		return errors.New("Cannot save: "+err.Error())
+	}
+
+	if {{.PrimaryKey.FieldValueName (abbr $.Name)}} == {{.PrimaryKey.DefaultValue}} {
+		inserting_err := insert{{.Name}}({{abbr .Name}})
 		if pqInsertingErr, ok := inserting_err.(*pq.Error); ok {
 			if pqInsertingErr.Code.Name() != "unique_violation" {
 				return pqInsertingErr
 			}
 		}
-
-		var setStatement, whereClause []string
-
-		if {{range $pki, $pk := .PrimaryKeys}}{{abbr $.Name}}.{{$pk.Name}} != {{$pk.DefaultValue}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}} && {{end}}{{end}} {
-			{{range $pki, $pk := .PrimaryKeys}}whereClause = append(whereClause, fmt.Sprintf("\"{{$pk.TableName}}\" = '{{$pk.Type.FmtReplacer}}'", {{$pk.FieldValueName (abbr $.Name)}})){{end}}
-		} else {
-	{{if gt (len .Indexes) 0}}
-			if {{range $ii, $index := .Indexes -}}
-			{{range $ifi, $indexField := $index.Fields -}}
-				{{- if and $indexField.Type.IsNullable (not $indexField.IsForeignKey)}}{{abbr $.Name}}.{{$indexField.Name}} != nil && {{end -}}
-				{{- $indexField.FieldValueName (abbr $.Name)}} != {{$indexField.DefaultValue -}}
-				{{- if IsNotLastElement $ifi (len $index.Fields)}} && {{end -}}
-			{{end}} {
-			{{range $ifi, $indexField := $index.Fields -}}
-			{{if true}}	{{end}}whereClause = append(whereClause, fmt.Sprintf("\"{{$indexField.TableName}}\" = '{{$indexField.Type.FmtReplacer}}'", {{$indexField.FieldValueName (abbr $.Name)}}))
-			{{end -}}
-	}{{if IsNotLastElement $ii (len $.Indexes)}} else if {{end -}}
-		{{- end -}}
-	{{- end}}
-		}
-
-		{{range $fi, $field := .AllFields}}{{if not $field.IsPrimaryKey}}
-		setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{$field.FieldValueName (abbr $.Name)}}))
-		{{- end}}{{end}}
-
-		_, err := Exec("UPDATE \"{{.TableName}}\" SET "+strings.Join(setStatement, ", ")+" WHERE "+strings.Join(whereClause, " AND "))
-		if err != nil {
-			return err
-		}
-
-		if {{range $pki, $pk := .PrimaryKeys}}{{abbr $.Name}}.{{$pk.Name}} == {{$pk.DefaultValue}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}} || {{end}}{{end}} {
-			var selectPKFields []string
-			{{range $pk := .PrimaryKeys}}selectPKFields = append(selectPKFields, "\"{{$pk.TableName}}\""){{end}}
-			row := QueryRow("SELECT "+strings.Join(selectPKFields, ", ")+" FROM \"{{.TableName}}\" WHERE " + strings.Join(whereClause, " AND ") + ";")
-
-			if scanning_err := row.Scan({{range $pki, $pk := .PrimaryKeys}}&{{abbr $.Name}}.{{$pk.Name}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}}, {{end}}{{end}}); scanning_err != nil {
-				return scanning_err
+	} else {
+		updating_err := update{{.Name}}({{abbr .Name}})
+		if pqUpdatingErr, ok := updating_err.(*pq.Error); ok {
+			if pqUpdatingErr.Code.Name() != "unique_violation" {
+				return pqUpdatingErr
 			}
 		}
-		return nil
+	}
 
+	var setStatement, whereClause []string
+
+	if {{range $pki, $pk := .PrimaryKeys}}{{abbr $.Name}}.{{$pk.Name}} != {{$pk.DefaultValue}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}} && {{end}}{{end}} {
+		{{range $pki, $pk := .PrimaryKeys}}whereClause = append(whereClause, fmt.Sprintf("\"{{$pk.TableName}}\" = '{{$pk.Type.FmtReplacer}}'", {{$pk.FieldValueName (abbr $.Name)}})){{end}}
+	} else {
+		{{range $i, $uniqueField := $.MustBeUniqueFields -}}
+		whereClause = append(whereClause, fmt.Sprintf("\"{{$uniqueField.TableName}}\" = '{{$uniqueField.Type.FmtReplacer}}'", {{$uniqueField.FieldValueName (abbr $.Name)}}))				
+		{{end}}
+	}
+	{{range $fi, $field := .AllFields}}{{if not $field.IsPrimaryKey}}
+	setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{$field.FieldValueName (abbr $.Name)}}))
+	{{- end}}{{end}}
+
+	_, err := Exec("UPDATE \"{{.TableName}}\" SET "+strings.Join(setStatement, ", ")+" WHERE "+strings.Join(whereClause, " AND "))
+	if err != nil {
+		return err
+	}
+
+	if {{range $pki, $pk := .PrimaryKeys}}{{abbr $.Name}}.{{$pk.Name}} == {{$pk.DefaultValue}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}} || {{end}}{{end}} {
+		var selectPKFields []string
+		{{range $pk := .PrimaryKeys}}selectPKFields = append(selectPKFields, "\"{{$pk.TableName}}\""){{end}}
+		row := QueryRow("SELECT "+strings.Join(selectPKFields, ", ")+" FROM \"{{.TableName}}\" WHERE " + strings.Join(whereClause, " AND ") + ";")
+
+		if scanning_err := row.Scan({{range $pki, $pk := .PrimaryKeys}}&{{abbr $.Name}}.{{$pk.Name}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}}, {{end}}{{end}}); scanning_err != nil {
+			return scanning_err
+		}
 	}
 	return nil
 }
 
 func insert{{.Name}} ({{abbr .Name}} *{{.Name}}) error {
+
 	{{range $field := .Fields}}{{if $field.IsPrimaryKey}}if {{abbr $.Name}}.{{$field.Name}} != {{$field.Type.DefaultValue}} {
-		return errors.New("Cannot insert {{$.Name}} with {{$field.Name}} != {{$field.Type.DefaultValue}}")
+		return errors.New("Cannot insert {{$.Name}} with {{$field.Name}} set up Primary Key (you can insert only models without PK)")
 	}
 	{{end}}{{end}}
+
+	if err := check{{.Name}}({{abbr .Name}}); err != nil {
+		return errors.New("Cannot insert {{.Name}}: "+err.Error())
+	}
 
 	var fieldTableNames, fieldValues []string
 	{{range $field := .AllFields -}}
@@ -101,6 +149,37 @@ func insert{{.Name}} ({{abbr .Name}} *{{.Name}}) error {
 	}
 	//fmt.Println(result.LastInsertId())
 	//fmt.Println(err)
+	return nil
+}
+
+func update{{.Name}}({{abbr .Name}} *{{.Name}}) error {
+	if {{.PrimaryKey.FieldValueName (abbr .Name)}} == {{.PrimaryKey.DefaultValue}} {
+		return errors.New("Cannot update {{$.Name}} with empty Primary Key")
+	}
+
+	if err := check{{.Name}}({{abbr .Name}}); err != nil {
+		return errors.New("Cannot update: "+err.Error())
+	}
+
+	var whereClause, setStatement []string
+	{{range $pk := $.PrimaryKeys -}}
+		whereClause = append(whereClause, fmt.Sprintf("\"{{$pk.TableName}}\" = '{{$pk.Type.FmtReplacer}}'", {{$pk.FieldValueName (abbr $.Name)}}))
+	{{end}}
+	{{range $fi, $field := .Fields}}
+	{{if $field.IsPointer}}
+		if {{abbr $.Name}}.{{$field.Name}} != nil {
+			setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{$field.FieldValueName (abbr $.Name)}}))
+		} else {
+			setStatement = append(setStatement, "\"{{$field.TableName}}\" = NULL")
+		}
+	{{else}}
+		setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{$field.FieldValueName (abbr $.Name)}}))
+	{{- end}}{{end}}
+
+	_, err := Exec("UPDATE \"{{.TableName}}\" SET "+strings.Join(setStatement, ", ")+" WHERE "+strings.Join(whereClause, " AND "))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

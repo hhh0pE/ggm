@@ -29,7 +29,7 @@ func (d Decimal) FmtReplacer() string {
 }
 
 func (d Decimal) DefaultValue() string {
-	return "ggm.NewDecimal(0)"
+	return `"0"`
 }
 
 func (d Decimal) GoBaseType() string {

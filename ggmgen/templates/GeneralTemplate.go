@@ -662,6 +662,23 @@ func scannerTypeToBaseType(s interface{}, baseType interface{}) interface{} {
 	return nil
 }
 
+func IsEmpty(m Model) bool {
+	switch m.TableName() {
+	{{range $model := .Models}}
+		case "{{$model.TableName}}":
+		if casted, ok := m.(*{{$model.Name}}); ok {
+			return isEmpty{{$model.Name}}(casted)
+		}
+		if casted, ok := m.({{$model.Name}}); ok {
+			return isEmpty{{$model.Name}}(&casted)
+		}
+	{{end}}
+	}
+	log.Println("Cannot run isEmpty for model \""+m.TableName()+"\" - run ggmgen first!")
+
+	return false
+}
+
 func Save(m Model) error {
 	switch m.TableName() {
 	{{range $model := .Models}}
@@ -673,6 +690,19 @@ func Save(m Model) error {
 	}
 
 	return errors.New("Cannot save model \""+m.TableName()+"\" - run ggmgen first!")
+}
+
+func Update(m Model) error {
+	switch m.TableName() {
+	{{range $model := .Models}}
+		case "{{$model.TableName}}":
+		if casted, ok := m.(*{{$model.Name}}); ok {
+			return update{{$model.Name}}(casted)
+		}
+	{{end}}
+	}
+
+	return errors.New("Cannot update model \""+m.TableName()+"\" - run ggmgen first!")
 }
 
 func Insert(m Model) error {

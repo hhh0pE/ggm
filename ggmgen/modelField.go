@@ -114,8 +114,8 @@ func (mf modelField) TableName() string {
 	}
 	return tableName
 }
-func(mf modelField) FullQuotedTableName() string {
-	return "\""+mf.Model.TableName+"\".\""+mf.TableName()+"\""
+func (mf modelField) FullQuotedTableName() string {
+	return "\"" + mf.Model.TableName + "\".\"" + mf.TableName() + "\""
 }
 func (mf modelField) Type() fieldType.FieldType {
 	if mf.fieldType == nil {
@@ -131,13 +131,25 @@ func (mf modelField) Type() fieldType.FieldType {
 //	return false
 //}
 func (mf modelField) FieldValueName(objName string) string {
+	var fieldName string
+
 	if mf.IsForeignKey {
-		return mf.Relation.modelTo.PrimaryKey().FieldValueName(objName)
+		fieldName = mf.Name + "." + mf.Relation.ModelTo().PrimaryKey().Name
+	} else {
+		fieldName = mf.Name
 	}
 
-	var fieldName = objName + "." + mf.Name
+	if objName != "" {
+		objName += "."
+	}
+
+	fieldName = objName + fieldName
+
 	if mf.ConstType == fieldType.DateType {
 		return fieldName + ".Unix()"
+	}
+	if mf.ConstType == fieldType.DecimalType {
+		return fieldName + ".String()"
 	}
 
 	if mf.IsPointer {

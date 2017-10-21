@@ -41,6 +41,18 @@ func (mi modelIndex) Fields() []modelField {
 	return fields
 }
 
+func (mi modelIndex) IsCoalesce() bool {
+	if mi.isCoalesce == false {
+		return false
+	}
+	for _, f := range mi.Fields() {
+		if f.IsPointer {
+			return true
+		}
+	}
+	return false
+}
+
 //func (mi modelIndex) Check() error {
 //	model := pkgS.GetModel(mi.modelName)
 //	if model == nil {
@@ -103,6 +115,8 @@ func coalesce(field modelField) string {
 		fieldNameCoalesce += `'0.0'`
 	case fieldType.TextType:
 		fieldNameCoalesce += `''`
+	case fieldType.DecimalType:
+		fieldNameCoalesce += `'0'`
 	case fieldType.BoolType:
 		fieldNameCoalesce += `'FALSE'`
 	case fieldType.DateType:
