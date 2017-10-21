@@ -13,7 +13,7 @@ func isEmpty{{.Name}}({{abbr .Name}} *{{.Name}}) bool {
 	if {{abbr .Name}} == nil {
 		return true
 	}
-	{{- range $field := .Fields}}
+	{{- range $field := .AllFields}}
 	if {{if $field.Type.IsNullable}}{{abbr $.Name}}.{{$field.Name}} != nil && {{end -}}
 	{{$field.FieldValueName (abbr $.Name)}} != {{$field.DefaultValue}} {
 		return false
@@ -23,7 +23,7 @@ func isEmpty{{.Name}}({{abbr .Name}} *{{.Name}}) bool {
 }
 
 {{define "isFieldEmptyCondition"}}
-{{- if $.Field.IsPointer}}{{$.Field.Name}} != nil && {{end}} 
+{{- if $.Field.IsPointer}}{{$.Abbr}}.{{$.Field.Name}} != nil && {{end}} 
 {{if $.Field.IsForeignKey -}}
 {{$.Field.FieldValueName $.Abbr}} == {{$.Field.DefaultValue}}
 {{- else -}}
@@ -35,20 +35,19 @@ func isEmpty{{.Name}}({{abbr .Name}} *{{.Name}}) bool {
 {{define "isFieldNotEmptyCondition"}}
 {{- if $.Field.IsPointer}}{{$.Field.Name}} != nil && {{end}} 
 {{if $.Field.IsForeignKey -}}
-{{$.Field.Relation.Field.Name $.Abbr}}.{{$.Field.FieldValueName ""}} != {{$.Field.DefaultValue}}
+{{$.Field.FieldValueName $.Abbr}} != {{$.Field.DefaultValue}}
 {{- else -}}
 {{$.Field.FieldValueName ($.Abbr)}} != {{$.Field.DefaultValue}}
 {{- end -}}
-
 {{- end}}
 
 func check{{.Name}}({{abbr .Name}} *{{.Name}}) error {
 	if isEmpty{{.Name}}({{abbr .Name}}) {
 		return errors.New("empty {{.Name}} model")
 	}
-	{{range $index := .Indexes}}{{if not $index.IsCoalesce}}
+	{{range $index := .Indexes}}{{if not $index.IsRealCoalesce}}
 	if {{range $ifi, $indexField := $index.Fields -}}
-	{{- $indexField.FieldValueName (abbr $.Name)}} == {{$indexField.DefaultValue}}{{if IsNotLastElement $ifi (len $index.Fields)}} && {{end}}
+	{{template "isFieldEmptyCondition" dict "Field" $indexField "Abbr" (abbr $.Name)}}{{if IsNotLastElement $ifi (len $index.Fields)}} && {{end}}
 	{{- end}} {
 		return errors.New("model {{$.Name}} with empty {{$index.Name}} index")
 	}
@@ -64,19 +63,38 @@ func check{{.Name}}({{abbr .Name}} *{{.Name}}) error {
 }
 
 func save{{.Name}}({{abbr .Name}} *{{.Name}}) error {
+	{{range $fk := .ForeignKeys}}
+	{{if $fk.Field.IsPointer}}
+	if {{abbr $.Name}}.{{$fk.Field.Name}} != nil {
+	{{end}}
+	if saving{{$fk.ModelTo.Name}}_err := save{{$fk.ModelTo.Name}}({{if not $fk.Field.IsPointer}}&{{end}}{{abbr $.Name}}.{{$fk.Field.Name}}); saving{{$fk.ModelTo.Name}}_err != nil {
+		return errors.New("Error when saving {{$.Name}}'s {{$fk.Field.Name}}: "+saving{{$fk.ModelTo.Name}}_err.Error())
+	}
+	{{if $fk.Field.IsPointer -}} } {{end}}
+	{{end}}
 	if err := check{{.Name}}({{abbr .Name}}); err != nil {
 		return errors.New("Cannot save: "+err.Error())
 	}
 
 	if {{.PrimaryKey.FieldValueName (abbr $.Name)}} == {{.PrimaryKey.DefaultValue}} {
 		inserting_err := insert{{.Name}}({{abbr .Name}})
+		if inserting_err == nil {
+			return nil
+		}
 		if pqInsertingErr, ok := inserting_err.(*pq.Error); ok {
 			if pqInsertingErr.Code.Name() != "unique_violation" {
 				return pqInsertingErr
 			}
+			{{if eq 0 (len $.MustBeUniqueFields) }}
+			//if no unique fields
+			return pqInsertingErr
+			{{end}}
 		}
 	} else {
 		updating_err := update{{.Name}}({{abbr .Name}})
+		if updating_err == nil {
+			return nil
+		}
 		if pqUpdatingErr, ok := updating_err.(*pq.Error); ok {
 			if pqUpdatingErr.Code.Name() != "unique_violation" {
 				return pqUpdatingErr
@@ -86,15 +104,27 @@ func save{{.Name}}({{abbr .Name}} *{{.Name}}) error {
 
 	var setStatement, whereClause []string
 
-	if {{range $pki, $pk := .PrimaryKeys}}{{abbr $.Name}}.{{$pk.Name}} != {{$pk.DefaultValue}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}} && {{end}}{{end}} {
-		{{range $pki, $pk := .PrimaryKeys}}whereClause = append(whereClause, fmt.Sprintf("\"{{$pk.TableName}}\" = '{{$pk.Type.FmtReplacer}}'", {{$pk.FieldValueName (abbr $.Name)}})){{end}}
+	{{range $i, $uniqueField := $.MustBeUniqueFields -}}
+		{{if $uniqueField.IsPointer}}
+	if {{abbr $.Name}}.{{$uniqueField.Name}} == nil {
+		whereClause = append(whereClause, "\"{{$uniqueField.TableName}}\" = NULL")				
 	} else {
-		{{range $i, $uniqueField := $.MustBeUniqueFields -}}
 		whereClause = append(whereClause, fmt.Sprintf("\"{{$uniqueField.TableName}}\" = '{{$uniqueField.Type.FmtReplacer}}'", {{$uniqueField.FieldValueName (abbr $.Name)}}))				
-		{{end}}
 	}
+		{{else}}
+	whereClause = append(whereClause, fmt.Sprintf("\"{{$uniqueField.TableName}}\" = '{{$uniqueField.Type.FmtReplacer}}'", {{$uniqueField.FieldValueName (abbr $.Name)}}))				
+		{{end}}
+	
+	{{end}}
+	
 	{{range $fi, $field := .AllFields}}{{if not $field.IsPrimaryKey}}
+	{{if $field.IsPointer}}
+	if {{abbr $.Name}}.{{$field.Name}} == nil {
+		setStatement = append(setStatement, "\"{{$field.TableName}}\" = NULL")
+	}
+	{{else}}
 	setStatement = append(setStatement, fmt.Sprintf("\"{{$field.TableName}}\" = '{{$field.Type.FmtReplacer}}'", {{$field.FieldValueName (abbr $.Name)}}))
+	{{end}}
 	{{- end}}{{end}}
 
 	_, err := Exec("UPDATE \"{{.TableName}}\" SET "+strings.Join(setStatement, ", ")+" WHERE "+strings.Join(whereClause, " AND "))
@@ -129,7 +159,15 @@ func insert{{.Name}} ({{abbr .Name}} *{{.Name}}) error {
 	{{range $field := .AllFields -}}
 		{{if not $field.IsPrimaryKey}}
 	fieldTableNames = append(fieldTableNames, "\"{{$field.TableName}}\"")
+			{{if $field.IsPointer}}
+	if {{abbr $.Name}}.{{$field.Name}} == nil {
+		fieldValues = append(fieldValues, "NULL")	
+	} else {
+		fieldValues = append(fieldValues, fmt.Sprintf("'{{$field.Type.FmtReplacer}}'", {{$field.FieldValueName (abbr $.Name)}}))	
+	}
+			{{- else}}
 	fieldValues = append(fieldValues, fmt.Sprintf("'{{$field.Type.FmtReplacer}}'", {{$field.FieldValueName (abbr $.Name)}}))
+			{{- end -}}
 		{{- end -}}
 	{{- end}}
 
@@ -271,7 +309,7 @@ func scan{{.Name}}Row({{abbr .Name}} *{{.Name}}, fieldNames []string, row *sql.R
 
 
 func ({{abbr .Name}} {{lower .Name}}Query) ALL() []{{.Name}} {
-	rows, err := ormDB.Query({{abbr .Name}}.SQL())
+	rows, err := Query({{abbr .Name}}.SQL())
 	if err != nil {
 		if ormDB == nil {
 			panic("initialize DB connection first!")

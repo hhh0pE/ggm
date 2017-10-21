@@ -207,23 +207,29 @@ func analyze() *packageStruct {
 	})
 
 	time4 := time.Now()
-	for _, m := range pStruct.Models {
-		relations := m.Relations()
-		//if m.Name != "CurrencyPair" {
-		//	continue
-		//}
+	// for _, m := range pStruct.Models {
+	// m.Relations()
 
-		fmt.Println(m.Name, len(relations))
-		for _, dr := range relations {
-			if dr.ViaModel != nil {
-				fmt.Println("\t", dr.RelationType, dr.ModelFrom.Name+"<= "+dr.ViaModel.Name+" =>"+dr.ModelTo.Name)
-			} else {
-				fmt.Println("\t", dr.RelationType, dr.ModelFrom.Name+"<=>"+dr.ModelTo.Name)
-			}
+	// fmt.Println("model", m.Name)
+	// for _, f := range m.AllFields() {
+	// 	fmt.Println(f.Name, f.IsPointer, f.Type().Nullable())
+	// }
+	// fmt.Println()
+	//if m.Name != "CurrencyPair" {
+	//	continue
+	//}
 
-		}
-		fmt.Println()
-	}
+	// fmt.Println(m.Name, len(relations))
+	// for _, dr := range relations {
+	// 	if dr.ViaModel != nil {
+	// 		fmt.Println("\t", dr.RelationType, dr.ModelFrom.Name+"<= "+dr.ViaModel.Name+" =>"+dr.ModelTo.Name)
+	// 	} else {
+	// 		fmt.Println("\t", dr.RelationType, dr.ModelFrom.Name+"<=>"+dr.ModelTo.Name)
+	// 	}
+
+	// }
+	// fmt.Println()
+	// }
 	fmt.Println("building relations execution time: ", time.Now().Sub(time4))
 	fmt.Println("initPackageStruct time", time3.Sub(time2))
 	fmt.Println("initStructFields time", time4.Sub(time3))

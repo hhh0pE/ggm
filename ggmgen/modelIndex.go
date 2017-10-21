@@ -41,16 +41,19 @@ func (mi modelIndex) Fields() []modelField {
 	return fields
 }
 
-func (mi modelIndex) IsCoalesce() bool {
-	if mi.isCoalesce == false {
-		return false
+func (mi modelIndex) IsRealCoalesce() bool {
+	if mi.isCoalesce {
+		return true
 	}
+
 	for _, f := range mi.Fields() {
 		if f.IsPointer {
-			return true
+			return false
 		}
 	}
-	return false
+	// if coalesce not set but no pointer fields
+	return true
+
 }
 
 //func (mi modelIndex) Check() error {
@@ -129,4 +132,19 @@ func coalesce(field modelField) string {
 	fieldNameCoalesce += `)`
 
 	return fieldNameCoalesce
+}
+
+func IsModelIndexEqual(mi1 modelIndex, mi2 modelIndex) bool {
+	if mi1.modelName != mi2.modelName {
+		return false
+	}
+	if len(mi1.fieldNames) != len(mi2.fieldNames) {
+		return false
+	}
+	for i := 0; i < len(mi1.fieldNames); i++ {
+		if mi1.fieldNames[i] != mi2.fieldNames[i] {
+			return false
+		}
+	}
+	return true
 }

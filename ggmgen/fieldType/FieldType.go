@@ -74,7 +74,7 @@ func sqlType(sqlTypeName string, ft FieldType) string {
 	if ft.Array() {
 		return sqlTypeName + "[]"
 	}
-	if ft.Nullable() {
+	if !ft.Nullable() {
 		return sqlTypeName + " NOT NULL"
 	}
 	return sqlTypeName

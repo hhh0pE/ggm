@@ -229,3 +229,10 @@ func (mf modelField) IsUnique() bool {
 	}
 	return false
 }
+
+func IsModelFieldEqual(mf1 modelField, mf2 modelField) bool {
+	if mf1.Model.Name == mf2.Model.Name && mf1.Name == mf2.Name {
+		return true
+	}
+	return false
+}

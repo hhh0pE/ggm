@@ -294,20 +294,22 @@ func (ms ModelStruct) Indexes() []modelIndex {
 func (ms ModelStruct) MustBeUniqueFields() []modelField {
 	var fields []modelField
 	for _, index := range ms.Indexes() {
-		if index.IsCoalesce() {
+		if index.IsRealCoalesce() {
 			for _, indexField := range index.Fields() {
-				var alredyExist bool
+				var alreadyExist bool
 				for _, alreadyExistField := range fields {
-					if indexField.Name == alreadyExistField.Name && indexField.Relation.Field == alreadyExistField.Relation.Field && indexField.Relation.modelTo == alreadyExistField.Relation.modelTo {
-						alredyExist = true
+					if IsModelFieldEqual(indexField, alreadyExistField) {
+						alreadyExist = true
+						break
 					}
 				}
-				if !alredyExist {
+				if !alreadyExist {
 					fields = append(fields, indexField)
 				}
 			}
 		}
 	}
+
 	return fields
 }
 

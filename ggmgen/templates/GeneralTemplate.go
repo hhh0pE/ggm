@@ -19,12 +19,15 @@ var ormDB *sql.DB
 const DEFAULT_DB_PORT = 5432
 
 var debug bool
+var debugSelect bool
 
-func EnableDebug() {
+func EnableDebug(debugSelect bool) {
 	debug = true
+	debugSelect = debugSelect
 }
 func DisableDebug() {
 	debug = false
+	debugSelect = false
 }
 
 func ConnectToDb(userName, dbName, password, host string, port int) {
@@ -67,10 +70,16 @@ func SetMaxConnections(num int) {
 }
 
 func Query(sql string, args ...interface{}) (*sql.Rows, error) {
+	if debugSelect {
+		log.Println(sql)
+	}
 	return ormDB.Query(sql, args...)
 }
 
 func QueryRow(sql string, args ...interface{}) *sql.Row {
+	if debugSelect {
+		log.Println(sql)
+	}
 	return ormDB.QueryRow(sql, args...)
 }
 
@@ -685,6 +694,8 @@ func Save(m Model) error {
 		case "{{$model.TableName}}":
 		if casted, ok := m.(*{{$model.Name}}); ok {
 			return save{{$model.Name}}(casted)
+		} else {
+			return errors.New("You can only save *{{$model.Name}} object")
 		}
 	{{end}}
 	}
