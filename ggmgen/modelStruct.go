@@ -83,17 +83,17 @@ func (ms *ModelStruct) DirectRelations() []modelRelation {
 		var relationExistMap = make(map[string]bool)
 
 		var modelRelations []modelRelation
-		for fi, f := range ms.fields {
+		for _, f := range ms.fields {
 			if f.Relation != nil {
-				newRelation := modelRelation{ModelFrom: ms, ModelTo: f.Relation.modelTo, Field: &ms.fields[fi]}
+				newRelation := modelRelation{ModelFrom: ms, ModelTo: f.Relation.modelTo}
 				if f.IsUnique() {
 					newRelation.RelationType = ONE2ONE
 				} else {
 					newRelation.RelationType = ONE2MANY
 				}
 
-				if _, exist := relationExistMap[newRelation.String()]; !exist {
-					relationExistMap[newRelation.String()] = true
+				if _, exist := relationExistMap[newRelation.Name()]; !exist {
+					relationExistMap[newRelation.Name()] = true
 					modelRelations = append(modelRelations, newRelation)
 				}
 			}
@@ -104,10 +104,9 @@ func (ms *ModelStruct) DirectRelations() []modelRelation {
 				continue
 			}
 			if !m.IsMany2ManyTableWithoutData() {
-				for fi, f := range m.fields { // adding reverse relations
+				for _, f := range m.fields { // adding reverse relations
 					if f.Relation != nil && f.Relation.modelTo.Name == ms.Name {
 						var newReverseRelation modelRelation
-						newReverseRelation.Field = &m.fields[fi]
 						newReverseRelation.ModelFrom = ms
 						newReverseRelation.ModelTo = m
 						if f.IsUnique() {
@@ -199,47 +198,9 @@ func directRelationRecursiveParse(ms *ModelStruct, longRelationNames map[string]
 
 func (ms ModelStruct) Relations() []modelRelation {
 	return append(ms.DirectRelations(), ms.LongRelations()...)
-	//var allRelations []modelRelation
-	//directRelations := ms.DirectRelations()
-	//allRelations = append(allRelations, directRelations...)
-	//
-	//return allRelations
-	//for _, relation := range directRelations {
-	//	relation.ModelTo.DirectRelations()
-	//}
 }
 
-//func (ms ModelStruct) RelatedModels() []ModelStruct {
-//	var relatedModels []ModelStruct
-//	for _, m := range pkgS.Models {
-//
-//	}
-//}
-//
-//func isInRelation(model1 *ModelStruct, model2 *ModelStruct) bool {
-//
-//}
-
-//func (ms ModelStruct) TableFields() []modelField {
-//	fields := ms.fields
-//	for i:=0; i<len(fields); i++ {
-//		if fields[i].Relation != nil && fields[i].Relation.
-//	}
-//	return ms.fields
-//}
-
 func (ms ModelStruct) CreateTableIfNotExistCommand() string {
-
-	//var lines []string
-	//for _, f := range ms.AllFields() {
-	//	lines = append(lines, `"`+f.TableName()+`" `+f.SqlType())
-	//}
-
-	//for _, fk := range ms.ForeignKeys() {
-	//	lines = append(lines, fk.SqlCreateTable())
-	//}
-
-	//return `CREATE TABLE IF NOT EXISTS "` + ms.TableName + `" (` + "\n\t\t" + strings.Join(lines, ",\n\t\t") + "\n\t\t);"
 	return `CREATE TABLE IF NOT EXISTS "` + ms.TableName + `" ();`
 }
 
@@ -286,6 +247,16 @@ func (ms ModelStruct) ForeignKeys() []tableForeignRelation {
 	}
 
 	return relations
+}
+
+func (ms ModelStruct) ForeignKeysTo(modelTo *ModelStruct) []tableForeignRelation {
+	var relationsTo []tableForeignRelation
+	for _, fk := range ms.ForeignKeys() {
+		if fk.ModelTo().Name == modelTo.Name {
+			relationsTo = append(relationsTo, fk)
+		}
+	}
+	return relationsTo
 }
 
 func (ms ModelStruct) Indexes() []modelIndex {

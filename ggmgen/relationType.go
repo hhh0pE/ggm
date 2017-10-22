@@ -1,15 +1,27 @@
 package main
 
+import "strings"
+
 type modelRelation struct {
-	Field        *modelField
 	ModelFrom    *ModelStruct
 	ModelTo      *ModelStruct
 	RelationType RelationType
 	ViaModel     *ModelStruct
 }
 
-func (mr modelRelation) String() string {
+func (mr modelRelation) Name() string {
 	return mr.RelationType.String() + ":" + mr.ModelFrom.Name + "->" + mr.ModelTo.Name
+}
+
+// func (mr modelRelation) Name() string {
+// 	if mr.Field != nil {
+// 		return mr.RelationType.String() + ":" + mr.ModelFrom.Name + "." + mr.Field.Name + "->" + mr.ModelTo.Name
+// 	}
+// 	return mr.ShortName()
+// }
+
+func (mr modelRelation) IsOneToXRelation() bool {
+	return (mr.RelationType == ONE2ONE || mr.RelationType == ONE2MANY)
 }
 
 type ForeignRelationSlice []string
@@ -37,7 +49,7 @@ func (frs ForeignRelationSlice) SqlString() string {
 // 	return "\"" + mr.ModelFrom.TableName + "\".\"" + mr.Field.TableName() + "\"=\"" + mr.ModelTo.TableName + "\".\"" + mr.ModelTo.PrimaryKey().TableName() + "\""
 // }
 
-func (mr modelRelation) SqlJoin() ForeignRelationSlice {
+func (mr modelRelation) SqlJoin(fieldName string) ForeignRelationSlice {
 	var modelFrom, modelTo *ModelStruct
 	modelFrom = mr.ModelFrom
 	modelTo = mr.ModelTo
@@ -45,15 +57,17 @@ func (mr modelRelation) SqlJoin() ForeignRelationSlice {
 	var fieldFrom, fieldTo *modelField
 
 	if mr.ViaModel != nil {
-		directRelations := mr.ViaModel.DirectRelations()
-		for dri, dr := range directRelations {
-			if dr.ModelTo.Name == modelFrom.Name {
-				fieldFrom = directRelations[dri].Field
-			}
-			if dr.ModelTo.Name == modelTo.Name {
-				fieldTo = directRelations[dri].Field
-			}
+		modelFromFKs := mr.ViaModel.ForeignKeysTo(modelFrom)
+		modelToFKs := mr.ViaModel.ForeignKeysTo(modelTo)
+		if len(modelFromFKs) > 1 || len(modelToFKs) > 1 {
+			panic("cannot build sql join for join: more than 1 FK relation " + mr.Name())
 		}
+		if len(modelFromFKs) == 0 || len(modelToFKs) == 0 {
+			panic("cannot build sql join for join: no FK relation " + mr.Name())
+		}
+		fieldFrom = modelFromFKs[0].Field
+		fieldTo = modelToFKs[0].Field
+
 		return []string{
 			`INNER JOIN "` + mr.ViaModel.TableName + `" ON "` + mr.ViaModel.TableName + `"."` + fieldFrom.TableName() + `" = "` + modelFrom.TableName + `"."` + modelTo.PrimaryKey().TableName() + `"`,
 			`INNER JOIN "` + modelTo.TableName + `" ON "` + modelTo.TableName + `"."` + modelTo.PrimaryKey().TableName() + `" = "` + mr.ViaModel.TableName + `"."` + fieldTo.TableName() + `"`,
@@ -63,19 +77,46 @@ func (mr modelRelation) SqlJoin() ForeignRelationSlice {
 		// 	`INNER JOIN "` + modelTo.TableName + `" ON "` + mr.ViaModel.TableName + `"."` + mr.ViaModel.PrimaryKey().TableName() + `" = "` + modelTo.TableName + `"."` + toFieldName + `"`,
 		// }
 	} else {
+		var conditions []string
+
 		if mr.RelationType == ONE2MANY {
 			modelFrom = mr.ModelFrom
-			fieldFrom = mr.Field
 
 			modelTo = mr.ModelTo
 			fieldTo = modelTo.PrimaryKey()
+
+			modelFromFKs := mr.ModelFrom.ForeignKeysTo(modelTo)
+			if len(modelFromFKs) > 1 && fieldName != "" {
+				for _, fk := range modelFromFKs {
+					if fk.Field.TableName() == fieldName {
+						modelFromFKs = []tableForeignRelation{fk}
+						break
+					}
+				}
+			}
+			for _, fk := range modelFromFKs {
+				conditions = append(conditions, `"`+modelFrom.TableName+`"."`+fk.Field.TableName()+`" = "`+modelTo.TableName+`"."`+fieldTo.TableName()+`"`)
+			}
 		} else {
 			modelFrom = mr.ModelFrom
 			fieldFrom = mr.ModelFrom.PrimaryKey()
 
 			modelTo = mr.ModelTo
-			fieldTo = mr.Field
+
+			modelToFKs := mr.ModelTo.ForeignKeysTo(modelFrom)
+			if len(modelToFKs) > 1 && fieldName != "" {
+				for _, fk := range modelToFKs {
+					if fk.Field.TableName() == fieldName {
+						modelToFKs = []tableForeignRelation{fk}
+						break
+					}
+				}
+			}
+			for _, fk := range modelToFKs {
+				conditions = append(conditions, `"`+modelFrom.TableName+`"."`+fieldFrom.TableName()+`" = "`+modelTo.TableName+`"."`+fk.Field.TableName()+`"`)
+			}
 		}
+
 		// if mr.RelationType == MANY2ONE {
 		// 	return []string{
 		// 		`INNER JOIN "` + mr.ModelTo.TableName + `" ON "` + mr.ModelTo.TableName + `"."` + mr.Field.TableName() + `" = "` + mr.ModelFrom.TableName + `"."` + mr.ModelTo.PrimaryKey().TableName() + `"`,
@@ -83,7 +124,7 @@ func (mr modelRelation) SqlJoin() ForeignRelationSlice {
 		// } else {
 
 		return []string{
-			`INNER JOIN "` + modelTo.TableName + `" ON "` + modelFrom.TableName + `"."` + fieldFrom.TableName() + `" = "` + modelTo.TableName + `"."` + fieldTo.TableName() + `"`,
+			`INNER JOIN "` + modelTo.TableName + `" ON ` + strings.Join(conditions, " OR "),
 		}
 		// }
 

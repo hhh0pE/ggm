@@ -104,31 +104,15 @@ type Model interface {
 type join struct {
 	from *join
 	TableName string
+	FieldName string
 	Alias string
 	JoinType string
 }
-/*func(j *join) sql() string {
-	if j.JoinType == "" {
-		j.JoinType = "INNER"
-	}
 
-	if j.Alias == "" {
-		return j.sqlWithoutAlias()
-	} else {
-		return j.JoinType+" JOIN \""+j.TableName+"\" "+j.Alias+" ON "+j.Alias+"\".\""+j.FieldName+"\" = "+j.From.Alias+".\""+j.From.FieldName+"\""
-	}
-}
-func(j *join) sqlWithoutAlias() string {
-	if j.JoinType == "" {
-		j.JoinType = "INNER"
-	}
-	return j.JoinType+" JOIN \""+j.TableName+"\" ON \""+j.TableName+"\".\""+j.FieldName+"\" = \""+j.from.TableName+"\".\""+j.from.FieldName+"\""
-}*/
-
-type joinMapType map[string]map[string]string
-func(jmp joinMapType) sql(fromName, toName, fromAlias, toAlias string) string {
+type joinMapType map[string]map[string]map[string]string
+func(jmp joinMapType) sql(fromName, toName, fieldName, fromAlias, toAlias string) string {
 	var sql string
-	if sqlText, exist := jmp[fromName][toName]; exist {
+	if sqlText, exist := jmp[fromName][toName][fieldName]; exist {
 		sql = sqlText
 	}
 	if fromAlias != "" {
@@ -146,8 +130,8 @@ var joinMap joinMapType
 type joinChain struct{
 	joins []join
 }
-func(jc *joinChain) AddJoin(tableName, alias string) {
-	jc.joins = append(jc.joins, join{TableName:tableName,Alias:alias})
+func(jc *joinChain) AddJoin(tableName, fieldName, alias string) {
+	jc.joins = append(jc.joins, join{TableName:tableName,FieldName:fieldName,Alias:alias})
 	if len(jc.joins) > 1 {
 		jc.joins[len(jc.joins)-1].from = &jc.joins[len(jc.joins)-2]
 	}
@@ -157,17 +141,27 @@ func(jc joinChain) SQL(startTableName string) string {
 
 	var result string
 	for _, join := range jc.joins {
-		result += joinMap.sql(join.from.TableName, join.TableName, join.from.Alias, join.Alias)
+		result += joinMap.sql(join.from.TableName, join.TableName, join.FieldName, join.from.Alias, join.Alias)
 	}
 	return result
 }
 
 func init() {
-	joinMap = make(map[string]map[string]string)
+	joinMap = make(map[string]map[string]map[string]string)
 	{{range $model := .Models}}
-		joinMap["{{$model.TableName}}"] = make(map[string]string)
-		{{range $relation := $model.DirectRelations}}
-			joinMap["{{$relation.ModelFrom.TableName}}"]["{{$relation.ModelTo.TableName}}"] = ` + "`" + `{{$relation.SqlJoin.SqlString}}` + "`" + `
+		joinMap["{{$model.TableName}}"] = make(map[string]map[string]string)
+		{{range $i, $relation := $model.DirectRelations}}
+			
+				joinMap["{{$relation.ModelFrom.TableName}}"]["{{$relation.ModelTo.TableName}}"] = make(map[string]string)
+			
+			{{if $relation.IsOneToXRelation}}
+				joinMap["{{$relation.ModelFrom.TableName}}"]["{{$relation.ModelTo.TableName}}"][""] = ` + "`" + `{{($relation.SqlJoin "").SqlString}}` + "`" + `	
+				{{range $fk := $relation.ModelFrom.ForeignKeysTo $relation.ModelTo}}
+					joinMap["{{$relation.ModelFrom.TableName}}"]["{{$relation.ModelTo.TableName}}"]["{{$fk.Field.TableName}}"] = ` + "`" + `{{($relation.SqlJoin $fk.Field.TableName).SqlString}}` + "`" + `	
+				{{end}}
+			{{else}}
+				joinMap["{{$relation.ModelFrom.TableName}}"]["{{$relation.ModelTo.TableName}}"][""] = ` + "`" + `{{($relation.SqlJoin "").SqlString}}` + "`" + `	
+			{{end}}
 		{{end}}
 	{{end}}
 }

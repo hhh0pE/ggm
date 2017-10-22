@@ -299,7 +299,15 @@ func scan{{.Name}}Row({{abbr .Name}} *{{.Name}}, fieldNames []string, row *sql.R
 		switch fieldNames[i] {
 	{{range $field := .NotScannerFields}}
 		case ` + "`" + `{{$field.FullQuotedTableName}}` + "`" + `:
-			{{abbr $.Name}}.{{$field.Name}} = scannerTypeToBaseType({{abbr $field.Name}}ForScan, {{abbr $.Name}}.{{$field.Name}}).({{$field.Type.GoBaseType}})
+			{{if $field.IsPointer}}
+				if scannedValue := scannerTypeToBaseType({{abbr $field.Name}}ForScan, {{abbr $.Name}}.{{$field.Name}}); scannedValue != nil {
+					{{abbr $.Name}}.{{$field.Name}} = scannedValue.({{$field.Type.GoBaseType}})	
+				}
+			{{else}}
+				{{abbr $.Name}}.{{$field.Name}} = scannerTypeToBaseType({{abbr $field.Name}}ForScan, {{abbr $.Name}}.{{$field.Name}}).({{$field.Type.GoBaseType}})
+			{{end}}
+			
+			
 	{{end}}
 		}
 	}
@@ -567,7 +575,7 @@ func ({{abbr .Name}} *{{lower .Name}}Select) LIMIT(limit int) *{{lower .Name}}Qu
 	{{if $.NestedCall}}
 	{{$.Prefix}}.{{$fk.Field.Name}}.joins = {{$.Prefix}}.joins
 	{{end}}
-	{{$.Prefix}}.{{$fk.Field.Name}}.joins.AddJoin("{{$fk.ModelTo.TableName}}", "{{$tableAlias}}")	
+	{{$.Prefix}}.{{$fk.Field.Name}}.joins.AddJoin("{{$fk.ModelTo.TableName}}", "{{$fk.Field.TableName}}", "{{$tableAlias}}")	
 	
 		{{- range $field := $fk.ModelTo.Fields}}
 	{{$.Prefix}}.{{$fk.Field.Name}}.{{$field.Name}}.name = "{{$tableAlias}}.\"{{$field.TableName}}\""
@@ -623,7 +631,7 @@ func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.
 	newRelation.originalWhere = wr.originalWhere
 	{{$alias := print $relation.ModelFrom.Name "_" $relation.ModelTo.Name}}
 	newRelation.joins = wr.joins
-	newRelation.joins.AddJoin("{{$relation.ModelTo.TableName}}", "{{$alias}}")
+	newRelation.joins.AddJoin("{{$relation.ModelTo.TableName}}", "", "{{$alias}}")
 
     {{range $field := $relation.ModelTo.Fields}}newRelation.{{$field.Name}}.where = newRelation
     newRelation.{{$field.Name}}.name = "{{$alias}}.\"{{$field.TableName}}\""
@@ -662,7 +670,7 @@ func({{abbr $.Name}} *{{lower $.Name}}Where) {{$relation.ModelTo.Name}}() whereR
 	var newRelation whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}}
 	{{$alias := print $relation.ModelFrom.Name "_" $relation.ModelTo.Name}}
 	newRelation.originalWhere = {{abbr $.Name}}
-	newRelation.joins.AddJoin("{{$relation.ModelTo.TableName}}", "{{$alias}}")
+	newRelation.joins.AddJoin("{{$relation.ModelTo.TableName}}", "", "{{$alias}}")
 
     {{range $field := $relation.ModelTo.Fields}}
     newRelation.{{$field.Name}}.where = &newRelation
