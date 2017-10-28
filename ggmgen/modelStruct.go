@@ -200,6 +200,18 @@ func (ms ModelStruct) Relations() []modelRelation {
 	return append(ms.DirectRelations(), ms.LongRelations()...)
 }
 
+func (ms ModelStruct) UniqueRelations() []modelRelation {
+	var uMap = make(map[string]interface{})
+	var uniqueRelations []modelRelation
+	for _, r := range ms.Relations() {
+		if _, exist := uMap[r.Name()]; !exist {
+			uniqueRelations = append(uniqueRelations, r)
+			uMap[r.Name()] = nil
+		}
+	}
+	return uniqueRelations
+}
+
 func (ms ModelStruct) CreateTableIfNotExistCommand() string {
 	return `CREATE TABLE IF NOT EXISTS "` + ms.TableName + `" ();`
 }

@@ -95,9 +95,9 @@ type modelField struct {
 	//Type fieldType.FieldType
 	ConstType fieldType.ConstFieldType
 	Relation  *tableForeignRelation
-
 	//Type         fieldType.FieldType
 
+	DefaultDBValue string
 	//ForeignKeys  []modelFieldFK
 	Tags []modelFieldTag
 
@@ -164,6 +164,9 @@ func (mf modelField) DefaultValue() string {
 	//	mf.Type = fieldType.Integer
 	//}
 	//fmt.Println(mf.Model.Name, mf.Name, "defaultValue", mf.Type)
+	if mf.DefaultDBValue != "" {
+		return mf.DefaultDBValue
+	}
 	return mf.Type().DefaultValue()
 }
 

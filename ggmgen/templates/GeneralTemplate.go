@@ -215,7 +215,7 @@ func createTableColumnsIfNotExist() error {
 		return nil
 	}
 
-	{{range $model := .Models}}{{range $field := $model.AllFields}}if creating_err := alterTableAddColumnFunc("{{$model.TableName}}", "{{$field.TableName}}", "{{$field.SqlType}}"); creating_err != nil {
+	{{range $model := .Models}}{{range $field := $model.AllFields}}if creating_err := alterTableAddColumnFunc("{{$model.TableName}}", "{{$field.TableName}}", "{{$field.SqlType}}{{if not (eq $field.DefaultDBValue "")}} DEFAULT '{{$field.DefaultDBValue}}'{{end}}"); creating_err != nil {
 			return creating_err
 	}
 	{{end}}{{end}}

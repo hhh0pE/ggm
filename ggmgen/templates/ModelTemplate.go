@@ -15,7 +15,7 @@ func isEmpty{{.Name}}({{abbr .Name}} *{{.Name}}) bool {
 	}
 	{{- range $field := .AllFields}}
 	if {{if $field.Type.IsNullable}}{{abbr $.Name}}.{{$field.Name}} != nil && {{end -}}
-	{{$field.FieldValueName (abbr $.Name)}} != {{$field.DefaultValue}} {
+	{{$field.FieldValueName (abbr $.Name)}} != {{$field.Type.DefaultValue}} {
 		return false
 	}
 	{{- end}}
@@ -25,9 +25,9 @@ func isEmpty{{.Name}}({{abbr .Name}} *{{.Name}}) bool {
 {{define "isFieldEmptyCondition"}}
 {{- if $.Field.IsPointer}}{{$.Abbr}}.{{$.Field.Name}} != nil && {{end}} 
 {{if $.Field.IsForeignKey -}}
-{{$.Field.FieldValueName $.Abbr}} == {{$.Field.DefaultValue}}
+{{$.Field.FieldValueName $.Abbr}} == {{$.Field.Type.DefaultValue}}
 {{- else -}}
-{{$.Field.FieldValueName ($.Abbr)}} == {{$.Field.DefaultValue}}
+{{$.Field.FieldValueName ($.Abbr)}} == {{$.Field.Type.DefaultValue}}
 {{- end -}}
 
 {{- end}}
@@ -35,9 +35,9 @@ func isEmpty{{.Name}}({{abbr .Name}} *{{.Name}}) bool {
 {{define "isFieldNotEmptyCondition"}}
 {{- if $.Field.IsPointer}}{{$.Field.Name}} != nil && {{end}} 
 {{if $.Field.IsForeignKey -}}
-{{$.Field.FieldValueName $.Abbr}} != {{$.Field.DefaultValue}}
+{{$.Field.FieldValueName $.Abbr}} != {{$.Field.Type.DefaultValue}}
 {{- else -}}
-{{$.Field.FieldValueName ($.Abbr)}} != {{$.Field.DefaultValue}}
+{{$.Field.FieldValueName ($.Abbr)}} != {{$.Field.Type.DefaultValue}}
 {{- end -}}
 {{- end}}
 
@@ -76,7 +76,7 @@ func save{{.Name}}({{abbr .Name}} *{{.Name}}) error {
 		return errors.New("Cannot save: "+err.Error())
 	}
 
-	if {{.PrimaryKey.FieldValueName (abbr $.Name)}} == {{.PrimaryKey.DefaultValue}} {
+	if {{.PrimaryKey.FieldValueName (abbr $.Name)}} == {{.PrimaryKey.Type.DefaultValue}} {
 		inserting_err := insert{{.Name}}({{abbr .Name}})
 		if inserting_err == nil {
 			return nil
@@ -132,7 +132,7 @@ func save{{.Name}}({{abbr .Name}} *{{.Name}}) error {
 		return err
 	}
 
-	if {{range $pki, $pk := .PrimaryKeys}}{{abbr $.Name}}.{{$pk.Name}} == {{$pk.DefaultValue}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}} || {{end}}{{end}} {
+	if {{range $pki, $pk := .PrimaryKeys}}{{abbr $.Name}}.{{$pk.Name}} == {{$pk.Type.DefaultValue}}{{if IsNotLastElement $pki (len $.PrimaryKeys)}} || {{end}}{{end}} {
 		var selectPKFields []string
 		{{range $pk := .PrimaryKeys}}selectPKFields = append(selectPKFields, "\"{{$pk.TableName}}\""){{end}}
 		row := QueryRow("SELECT "+strings.Join(selectPKFields, ", ")+" FROM \"{{.TableName}}\" WHERE " + strings.Join(whereClause, " AND ") + ";")
@@ -191,7 +191,7 @@ func insert{{.Name}} ({{abbr .Name}} *{{.Name}}) error {
 }
 
 func update{{.Name}}({{abbr .Name}} *{{.Name}}) error {
-	if {{.PrimaryKey.FieldValueName (abbr .Name)}} == {{.PrimaryKey.DefaultValue}} {
+	if {{.PrimaryKey.FieldValueName (abbr .Name)}} == {{.PrimaryKey.Type.DefaultValue}} {
 		return errors.New("Cannot update {{$.Name}} with empty Primary Key")
 	}
 
@@ -265,7 +265,7 @@ type {{lower .Name}}Query struct {
 func scan{{.Name}}Row({{abbr .Name}} *{{.Name}}, fieldNames []string, row *sql.Rows) error {
 	var fieldPointers []interface{}
 	{{range $nsf := .NotScannerFields}}
-	var {{abbr $nsf.Name}}ForScan {{$nsf.Type.GoScannerType}}
+	var {{$nsf.Name}}ForScan {{$nsf.Type.GoScannerType}}
 	{{- end}}
 	for i, _ := range fieldNames {
 		switch fieldNames[i] {
@@ -279,7 +279,7 @@ func scan{{.Name}}Row({{abbr .Name}} *{{.Name}}, fieldNames []string, row *sql.R
 				{{if $field.Type.ImplementScannerInterface -}}
 			fieldPointers = append(fieldPointers, &{{abbr $.Name}}.{{$field.Name}})
 				{{- else -}}
-			fieldPointers = append(fieldPointers, &{{abbr $field.Name}}ForScan)
+			fieldPointers = append(fieldPointers, &{{$field.Name}}ForScan)
 				{{end -}}
 
 			{{end}}
@@ -300,11 +300,11 @@ func scan{{.Name}}Row({{abbr .Name}} *{{.Name}}, fieldNames []string, row *sql.R
 	{{range $field := .NotScannerFields}}
 		case ` + "`" + `{{$field.FullQuotedTableName}}` + "`" + `:
 			{{if $field.IsPointer}}
-				if scannedValue := scannerTypeToBaseType({{abbr $field.Name}}ForScan, {{abbr $.Name}}.{{$field.Name}}); scannedValue != nil {
+				if scannedValue := scannerTypeToBaseType({{$field.Name}}ForScan, {{abbr $.Name}}.{{$field.Name}}); scannedValue != nil {
 					{{abbr $.Name}}.{{$field.Name}} = scannedValue.({{$field.Type.GoBaseType}})	
 				}
 			{{else}}
-				{{abbr $.Name}}.{{$field.Name}} = scannerTypeToBaseType({{abbr $field.Name}}ForScan, {{abbr $.Name}}.{{$field.Name}}).({{$field.Type.GoBaseType}})
+				{{abbr $.Name}}.{{$field.Name}} = scannerTypeToBaseType({{$field.Name}}ForScan, {{abbr $.Name}}.{{$field.Name}}).({{$field.Type.GoBaseType}})
 			{{end}}
 			
 			
@@ -562,7 +562,6 @@ func ({{abbr .Name}} *{{lower .Name}}Select) LIMIT(limit int) *{{lower .Name}}Qu
 {{template "modelWhereRelation" .}}
 
 
-
 {{define "relationWhereInitialize"}}
 	
 	{{- range $fk := .Model.ForeignKeys}}
@@ -592,7 +591,7 @@ func ({{abbr .Name}} *{{lower .Name}}Select) LIMIT(limit int) *{{lower .Name}}Qu
 {{end}}
 
 {{define "modelWhereRelation"}}
-{{range $modelRelation := .Relations}}
+{{range $modelRelation := .UniqueRelations}}
 {{if not (eq $modelRelation.ModelTo.Name $.Name)}}
 type whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}} struct {
 	{{range $field := $modelRelation.ModelTo.Fields}}{{$field.Name}}     whereField{{title $field.Type.Name}}{{$modelRelation.ModelFrom.Name}}
@@ -623,6 +622,7 @@ func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.
 	wr.originalWhere.andOr()
 }
 
+{{/*
 {{range $relation := $modelRelation.ModelTo.DirectRelations}}
 	{{if not (or (or (eq $relation.RelationType.String "ONE2ONE") (eq $relation.RelationType.String "ONE2MANY")) (eq $relation.ModelTo.Name $modelRelation.ModelFrom.Name) )}}
 func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.Name}}) {{$relation.ModelTo.Name}}() whereRelation{{$modelRelation.ModelFrom.Name}}_{{$relation.ModelTo.Name}} {
@@ -647,6 +647,7 @@ func(wr whereRelation{{$modelRelation.ModelFrom.Name}}_{{$modelRelation.ModelTo.
 }
 	{{end}}
 {{end}}
+*/}}
 
 {{end}}
 {{end}}
@@ -662,6 +663,7 @@ type {{lower .Name}}Where struct {
 	conds          string
 	nextOperatorOr bool
 }
+{{/*
 {{range $relation := .DirectRelations}}
 	{{if not (or (eq $relation.RelationType.String "ONE2ONE") (eq $relation.RelationType.String "ONE2MANY"))}}
 func({{abbr $.Name}} *{{lower $.Name}}Where) {{$relation.ModelTo.Name}}() whereRelation{{$relation.ModelFrom.Name}}_{{$relation.ModelTo.Name}} {
@@ -691,6 +693,7 @@ func({{abbr $.Name}} *{{lower $.Name}}Where) {{$relation.ModelTo.Name}}() whereR
 }
 	{{end}}
 {{end}}
+*/}}
 
 func ({{abbr .Name}} {{lower .Name}}Where) conditionSQL() string {
 	return {{abbr .Name}}.conds + ")"

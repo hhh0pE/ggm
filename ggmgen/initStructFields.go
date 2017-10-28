@@ -93,6 +93,19 @@ func scanTags(field *modelField) {
 			}
 		}
 	}
+
+	if sqlTag, exist := field.FindTag("default"); exist {
+		switch field.ConstType {
+		case fieldType.BoolType:
+			if strings.ToLower(sqlTag) == "true" {
+				field.DefaultDBValue = "TRUE"
+			} else {
+				field.DefaultDBValue = "FALSE"
+			}
+		default:
+			field.DefaultDBValue = `'` + sqlTag + `'`
+		}
+	}
 }
 
 func scanField(field *types.Var) []modelField {
